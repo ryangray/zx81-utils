@@ -1,5 +1,10 @@
+2023-02-06 ryangray
+    * Added p2spectrum utility to convert a ZX81 BASIC program in a .p file to
+      a ZX Spectrum BASIC program in a text file, either zmakebas compatible or
+      a readable style.
+    * Updated Makefile to also make test1 for p2txt and p2spectrum. 
+
 2023-01-05 ryangray
     * Changed the normal "readable" ouput to have more features.
     * Added an output style option that outputs characters compatible with  
       zmakebas.
-s
