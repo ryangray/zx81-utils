@@ -47,3 +47,105 @@ The block graphics are a backslash before two symbols depicting the graphic shap
 
 See the example `TEST1.p` with its two output versions, `TEST1.txt`, the 
 "readable" version, and `TEST1.bas`, the zmakebas version.
+
+
+# p2spectrum
+
+A utility to convert a ZX81 BASIC program in a .p file to a ZX Spectrum BASIC 
+program in a text file, either zmakebas compatible or a readable style.
+
+## Usage
+
+    p2spectrum -r filename.p > filename.txt
+    p2spectrum -z filename.p > filename.txt
+
+The `-r` option give a more readable output form with block graphics characters 
+(for most), and brackets around inverse characters. The `-z` output option (the 
+default) is a [zmakebas]() compatible output so you can use that to make a 
+`.tap` file of the result.
+
+The differences in ZX81 and Spectrum BASIC are handled by:
+
+* Block graphics
+
+    The block graphic characters, except for the 6 that have "grey" parts, are
+    shown as Unicode block characters for the `-r` option , and as zmakebas
+    escapes for the `-z` option (as shown in the [`p2txt`](#p2txt) section).
+    
+* "Grey" block graphic characters
+  
+    If any of the 6 "grey" block graphics characters are used, which the Spectrum
+    doesn't have, then a subroutine is added that programs them on UDG characters
+    A through F and makes the character substitutions using zmakebas notation of
+    `\a` through `\f`.
+
+* `UNPLOT` command
+
+    The `UNPLOT` command is converted to `PLOT INVERSE 1;`.
+
+* `PLOT` resolution
+
+    The `PLOT` and `UNPLOT` commands have their x,y coordinated multiplied by 4,
+    and subroutine calls added after each to draw a magnified pixel that is 4x 
+    the Spectrum's. This is meant for compatibility, and you can then go in and
+    upscale the resolution of the program.
+
+* `SCROLL` command
+
+    The Spectrum doesn't have this command since it has "automatic" scrolling,
+    but that usually prompts the user. The `SCROLL` command is replaced with:
+
+        POKE 23692,255: PRINT AT 21,0'': REM SCROLL
+
+    The POKE resets the scroll prompt countdown so it won't prompt you when a 
+    print causes a scroll, then we print at the last line and two new lines.
+
+* `FAST` and `SLOW`
+
+    The Spectrum did away with the need for these commands, so they are simply
+    left out of the output. However, there are ZX81 programs that used these in
+    rapid succession and in patterns to make music and sounds, but that wouldn't
+    work on a Spectrum, and you'd have to change the sound generation to use the
+    `BEEP` command or the sound chip if your Spectrum variant has one.
+
+* `POKE` and `PEEK`
+
+    Any `POKE` statement is disabled as a REMark, and a warning REM is appended.
+    Any line with a `PEEK` call has a warning `REM` appended to it to warn you 
+    that the address won't be compatible.
+
+* `USR` call to machine code
+
+    Since it is very unikely that any practical machine code is compatible, any
+    `USR` call is converted to `INT INT` to not attempt to call any code. The
+    utility also doesn't use escape codes in any `REM` to try to preserve the
+    codes (like `p2txt` does) since it disables these calls.
+
+* `CHR$` and `CODE`
+
+    Lines that use these will have warning REMarks appended to alert you that
+    you may need to modify the codes these use or are compared to since the 
+    codes differ between the two systems.
+
+* `INKEY$`
+
+    Any line that uses `INKEY$` will get a warning REMark appended alerting you 
+    to check characters the result is compared to and that you will likely want 
+    to change letters to lowercase since that's what it will return for letters
+    without the shift key.
+
+* Autosave
+
+    A `SAVE` line with an inverse character at the end of the name is converted
+    to `SAVE` with `LINE` appended and the line number plus one to have the 
+    save auto run on the next line. You would need to use the `-a` option on 
+    `zmakebas` to have a .tap file you made of it to autorun.
+
+* Inverse characters
+
+    These are shown in two ways. For the `-r` option for more readable output,
+    inverse characters are shown each enclosed in square brackets. Letters are 
+    uppercase. For the `-z` zmakebas output option, the characters are made 
+    inverse by inserting the inverse video and true video attribute characters
+    before and after the character.
+

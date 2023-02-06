@@ -10,7 +10,7 @@ else
    CFLAGS = -Wall -I$(IDIR)
 endif
 
-all: p2txt
+all: p2txt p2spectrum test1p2t test1p2s
 
 p2txt: p2txt.o
 	$(CC) -o $@ $^ $(CFLAGS)
@@ -21,16 +21,17 @@ p2spectrum: p2spectrum.o
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-test1p: TEST1.p
+%.p: %.bas
+	zmakebas -p -o %@ $<
 
-TEST1.p: TEST1.bas
-	zmakebas -p -o TEST1.p TEST1.bas
+%.p: %.txt
+	zmakebas -p -o %@ $<
 
-test1p2t: p2txt test1p
+test1p2t: p2txt TEST1.p
 	./p2txt -r TEST1.p > TEST1-p2txt-r.txt
 	./p2txt -z TEST1.p > TEST1-p2txt-z.txt
 	
-test1p2s: p2spectrum test1p
+test1p2s: p2spectrum TEST1.p
 	./p2spectrum -r TEST1.p > TEST1-p2spectrum-r.txt
 	./p2spectrum -z TEST1.p > TEST1-p2spectrum-z.txt
 	zmakebas -o TEST1-p2spectrum.tap TEST1-p2spectrum-z.txt
