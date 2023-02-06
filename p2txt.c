@@ -178,7 +178,7 @@ for (f = 0; f < linelen - 1; f++)
 
     else if ( style == OUT_ZMAKEBAS && 
                 ((keyword == REM_code && f > 0) || inQuotes) && 
-                ((strcmp(x, NAK) == 0) || ((strlen(x) > 1) && (x[0] != '\\'))) )
+                ((strcmp(x, NAK) == 0) || ((strlen(x) > 1) && (x[0] != '\\') && (x[0]!='`'))) )
         printf("\\{%d}", c); /* Print escaped as char code */
 
     else
