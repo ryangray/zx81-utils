@@ -21,12 +21,14 @@ p2spectrum: p2spectrum.o
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-test1p:
+test1p: TEST1.p
+
+TEST1.p: TEST1.bas
 	zmakebas -p -o TEST1.p TEST1.bas
 
 test1p2t: p2txt test1p
-	./p2txt -r TEST1.p > TEST1-r.txt
-	./p2txt -z TEST1.p > TEST1.txt
+	./p2txt -r TEST1.p > TEST1-p2txt-r.txt
+	./p2txt -z TEST1.p > TEST1-p2txt-z.txt
 	
 test1p2s: p2spectrum test1p
 	./p2spectrum -r TEST1.p > TEST1-p2spectrum-r.txt
