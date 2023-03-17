@@ -13,6 +13,8 @@
   21 REM ` QUOTE IMAGE
   22 LET B$="HE SAID, `STOP`."
   23 REM \\ POUND STERLING
+  24 LET Y=2**3
+  25 LET C$="\{216}STARS\{216}"
   30 REM INVERSES
   31 REM abcdefghijklm
   32 REM nopqrstuvwxyz

@@ -22,19 +22,20 @@ p2spectrum: p2spectrum.o
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 %.p: %.bas
-	zmakebas -p -o %@ $<
+	zmakebas -p -n $* -o $@ $<
 
 %.p: %.txt
-	zmakebas -p -o %@ $<
+	zmakebas -p -n $* -o $@ $<
 
 test1p2t: p2txt TEST1.p
 	./p2txt -r TEST1.p > TEST1-p2txt-r.txt
+	./p2txt -1 TEST1.p > TEST1-p2txt-1.txt
 	./p2txt -z TEST1.p > TEST1-p2txt-z.txt
 	
 test1p2s: p2spectrum TEST1.p
 	./p2spectrum -r TEST1.p > TEST1-p2spectrum-r.txt
 	./p2spectrum -z TEST1.p > TEST1-p2spectrum-z.txt
-	zmakebas -o TEST1-p2spectrum.tap TEST1-p2spectrum-z.txt
+	zmakebas -n TEST1 -o TEST1-p2spectrum.tap TEST1-p2spectrum-z.txt
 
 clean:
 	rm -f *.o core

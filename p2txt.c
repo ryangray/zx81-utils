@@ -18,6 +18,8 @@ unsigned char linebuf[32768]; /* BIG buffer for those lovely m/c REMs */
 char *infile;
 enum outstyle {OUT_READABLE, OUT_ZMAKEBAS};
 enum outstyle style = OUT_READABLE;
+int inFirstLineREM; /* 1=First line is a REM and we are on the first line */
+int onlyFirstLineREM = 0; /* 1=Only preserve codes in a first line REM, 0=Preserve codes everywhere */
 
 /************** the zx81 char set as transposed to ascii ***************/
 
@@ -176,11 +178,14 @@ for (f = 0; f < linelen - 1; f++)
     if ( (keyword != REM_code) && (c == NUM_code) )
         f += 5;  /* avoid inline FP numbers - but ok for REMs */
 
-    else if ( style == OUT_ZMAKEBAS && 
-                ((keyword == REM_code && f > 0) || inQuotes) && 
+    else if ( (keyword == REM_code && f > 0) || inQuotes)
+        {
+        if ( style == OUT_ZMAKEBAS && (!onlyFirstLineREM || inFirstLineREM) &&
                 ((strcmp(x, NAK) == 0) || ((strlen(x) > 1) && (x[0] != '\\') && (x[0]!='`'))) )
-        printf("\\{%d}", c); /* Print escaped as char code */
-
+            printf("\\{%d}", c); /* Print escaped as char code */
+        else
+            printf("%s", x); /* Print translated char */
+        }
     else
         printf("%s", x); /* Print translated char */
     }
@@ -205,21 +210,31 @@ total = d_file - 16509; /* if d_file is after, prog is 16509 to d_file-1 right? 
 
 /* run through 'total' bytes, interpreting them as ZX81 program lines */
 zxgetline(in, &linenum, &linelen, &total);
+inFirstLineREM = (linebuf[0] == REM_code);
+
 while (total >= 0)
     {
     printf("%4d",linenum);
     xlatline(linelen);
+    inFirstLineREM = 0;
     zxgetline(in,&linenum,&linelen,&total);
     }
 }
 
 void print_usage ()
   {
-  printf("P2txt by Russell Marks for improbabledesigns\n");
+  printf("P2txt by Ryan Gray, from original by Russell Marks for improbabledesigns\n");
   printf("Lists ZX81 .P files to stdout.\n");
-  printf("Usage:  p2txt infile.p >outfile.txt\n");
-  printf("Lowercase is used for inverse video. Graphics and unused chars\n");
-  printf("give a hash (#) character.\n");
+  printf("Usage:  p2txt [options] infile.p > outfile.txt\n");
+  printf("Options are:\n");
+  printf("  -z  Output Zmakebas compatible markup\n");
+  printf("  -r  Output a more readable markup (default).\n");
+  printf("      Inverse characters in square brackets, most block graphics.\n");
+  printf("  -1  Output Zmakebas markup but only use codes in a first line that is a REM.");
+  printf("The Zmakebas output will use \\{xxx} codes in REMs and quotes to preserve\n");
+  printf("the non-printable and token character codes, whereas in readable mode, these\n");
+  printf("will give a hash (#) character. Zmakebas mode also inserts inverse and true\n");
+  printf("video codes where inverse characters appear in REMs and strings.\n");
   exit(1);
   }
 
@@ -227,17 +242,24 @@ void parse_options(int argc, char *argv[])
 {
     int opt = 0;
 
-    while ((opt = getopt(argc, argv, "zr")) != -1)
+    while ((opt = getopt(argc, argv, "zr1")) != -1)
         {
         switch (opt)
             {
             case 'z':
                 style = OUT_ZMAKEBAS;
                 charset = charset_zmb;
+                onlyFirstLineREM = 0;
                 break;
             case 'r':
                 style = OUT_READABLE;
                 charset = charset_read;
+                onlyFirstLineREM = 0;
+                break;
+            case '1':
+                style = OUT_ZMAKEBAS;
+                charset = charset_zmb;
+                onlyFirstLineREM = 1;
                 break;
             default:
                 print_usage();

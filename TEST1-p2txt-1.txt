@@ -1,7 +1,7 @@
    1 REM Z80 CODE:\' C\{65}\{201}
    2 REM REM CODES: 1,40,65,201
-   3 LET A$="CODES IN \{213}"
-   4 LET B$="\{234}IN A STRING"
+   3 LET A$="CODES IN STR$ "
+   4 LET B$=" REM IN A STRING"
   10 REM BLOCK GRAPHICS
   11 REM 1 2 3 4 5 6 7 8
   12 REM \'  \ ' \ . \.  \:  \.. \'' \ :
@@ -14,7 +14,7 @@
   22 LET B$="HE SAID, `STOP`."
   23 REM \\ POUND STERLING
   24 LET Y=2**3
-  25 LET C$="\{216}STARS\{216}"
+  25 LET C$="**STARS**"
   30 REM INVERSES
   31 REM abcdefghijklm
   32 REM nopqrstuvwxyz

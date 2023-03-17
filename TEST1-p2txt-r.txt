@@ -13,6 +13,8 @@
   21 REM "" QUOTE IMAGE
   22 LET B$="HE SAID, ""STOP""."
   23 REM £ POUND STERLING
+  24 LET Y=2**3
+  25 LET C$="**STARS**"
   30 REM INVERSES
   31 REM [A][B][C][D][E][F][G][H][I][J][K][L][M]
   32 REM [N][O][P][Q][R][S][T][U][V][W][X][Y][Z]
