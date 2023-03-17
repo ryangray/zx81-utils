@@ -39,6 +39,7 @@
 #define K_PEEK      211
 #define K_USR       212
 #define K_CHR       214
+#define K_POWER     216
 #define K_STOP      227
 #define K_SLOW      228
 #define K_FAST      229
@@ -452,8 +453,13 @@ void translateLine (int linelen, int linenum)
                     else if (c == K_INKEY)  inkey_p = 1;
                     }
                 }
-            else /* In REM or in quotes */
-                printf("%s", x); /* Print translated char */
+            else
+                {
+                if ( c == K_POWER && (keyword == K_REM || inQuotes) )
+                    printf("**"); /* Print stars instead of ^ */
+                else /* Nothing special */
+                    printf("%s", x); /* Print translated char */
+                }
             }
         }
             
@@ -549,7 +555,16 @@ void printUsage ()
 {
     printf("P2spectrum by Ryan Gray\n");
     printf("Translates a ZX81 .P file program to Spectrum BASIC text.\n");
-    printf("Usage:  p2spectrum infile.p > outfile.txt\n");
+    printf("Usage:  p2spectrum [options] infile.p > outfile.txt\n");
+    printf("Options are:\n");
+    printf("  -z  Output Zmakebas compatible markup\n");
+    printf("  -r  Output a more readable markup (default).\n");
+    printf("      Inverse characters in square brackets, most block graphics.\n");
+    //printf("  -o outfile  Give the name of an output file rather than using stdout.\n");
+    printf("The Zmakebas output will use \\{xxx} codes in REMs and quotes to preserve\n");
+    printf("the non-printable and token character codes, whereas in readable mode, these\n");
+    printf("will give a hash (#) character. Zmakebas mode also inserts inverse and true\n");
+    printf("video codes where inverse characters appear in REMs and strings.\n");
     exit(1);
 }
 
