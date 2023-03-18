@@ -1,17 +1,36 @@
 # ZX81-UTILS
 
-This is forked from [Mike Ralphson's zx81-utils](https://github.com/MikeRalphson/zx81-utils)
-on GitHub and modified by [Ryan Gray](https://github.com/ryangray/zx81-utils).
-It changes the readable output of `p2txt` and adds a [zmakebas](https://github.com/ryangray/zmakebas)
-compatible output option.
+This is forked from [Mike Ralphson's zx81-utils][ralphson] on GitHub and 
+modified by [Ryan Gray][zx81-utils]. It changes the readable output of 
+[`p2txt`](#p2txt) and adds a [zmakebas][] compatible output option. The 
+[`p2spectrum`](#p2spectrum) utility has also been added.
+
+[ralphson]: https://github.com/MikeRalphson/zx81-utils
+[zx81-utils]: https://github.com/ryangray/zx81-utils
+[zmakebas]: https://github.com/ryangray/zmakebas
 
 # p2txt
 
 Extracts the ZX81 BASIC listing from a .p file. It can give a version compatible
-with [zmakebas]() or a more readable style. Output is to standard output, so you
+with [zmakebas][] or a more readable style. Output is to standard output, so you
 can redirect to a file if you wish:
 
     p2txt filename.p > filename.txt
+
+The zmakebas output can be run back through that utility to create a .p file 
+again, allowing you to edit the file on your computer and take it back into the
+emulator. There are also utilities to convert the .p file to a .wav file for 
+loading onto a real machine.
+
+This utility is similar to the `listbasic` utility from the [FUSE emulator][fuse] 
+utilities [`fuse-utils`][fuse-utils] and `tzxcat` from [tzxtools][] which produce
+Spectrum BASIC listings. The [`p2spectrum`](#p2spectrum) utility in this package
+can convert the ZX81 program in a .p file to a Spectrum compatible BASIC program
+in a text file.
+
+[fuse]: https://fuse-emulator.sourceforge.net/
+[fuse-utils]: https://sourceforge.net/p/fuse-emulator/fuse-utils/ci/master/tree/
+[tzxtools]: https://github.com/shred/tzxtools
 
 ## Usage
 
@@ -48,11 +67,28 @@ The block graphics are a backslash before two symbols depicting the graphic shap
 See the example `TEST1.p` with its two output versions, `TEST1.txt`, the 
 "readable" version, and `TEST1.bas`, the zmakebas version.
 
+An alternative to `-z` is `-1` which is the same except that it only uses 
+character codes in a first line that is a `REM` statement in order to preserve
+machine code there but elsewhere expand to the normal token text. If you run
+this back through zmakebas, the code will have regular text in those places 
+rather than character codes. This may be undesirable if, for example, tokens 
+were used in a comparison to an `INKEY$` result:
+
+    100 LET K$=INKEY$
+    110 IF K$=" STOP " THEN STOP
+
+You would need to preserve tokens, manually insert the token code escape, or 
+change the comparison to test the `CODE` of the string instead.
+
 
 # p2spectrum
 
-A utility to convert a ZX81 BASIC program in a .p file to a ZX Spectrum BASIC 
-program in a text file, either zmakebas compatible or a readable style.
+A utility to convert a ZX81 (or Timex Sinclair 1000) BASIC program in a .p file 
+to a ZX Spectrum (or Timex Sinclair 2068) BASIC program in a text file. You can
+choose either a [zmakebas][] compatible or a readable output style. A zmakebas 
+output can be run through that utility to make a .tap file for a Spectrum 
+emulator which can also be converted to a .wav file for loading on a real 
+machine.
 
 ## Usage
 
@@ -61,7 +97,7 @@ program in a text file, either zmakebas compatible or a readable style.
 
 The `-r` option give a more readable output form with block graphics characters 
 (for most), and brackets around inverse characters. The `-z` output option (the 
-default) is a [zmakebas]() compatible output so you can use that to make a 
+default) is a [zmakebas][] compatible output so you can use that to make a 
 `.tap` file of the result.
 
 The differences in ZX81 and Spectrum BASIC are handled by:
@@ -149,3 +185,9 @@ The differences in ZX81 and Spectrum BASIC are handled by:
     inverse by inserting the inverse video and true video attribute characters
     before and after the character.
 
+* Miscelaneous
+
+    - The ZX81 raise to power character `**` is converted to the Spectrum one 
+      `^` except in `REM` statements and strings where it is rendered as two
+      asterisks since those contexts would be using the ZX81 visual 
+      representation.
