@@ -13,10 +13,11 @@
 #define QUOTE_code 11
 #define NUM_code 126
 #define REM_code 234
+#define NAK2 "!"
 
 unsigned char linebuf[32768]; /* BIG buffer for those lovely m/c REMs */
 char *infile;
-enum outstyle {OUT_READABLE, OUT_ZMAKEBAS};
+enum outstyle {OUT_READABLE, OUT_ZMAKEBAS, OUT_ZXTEXT2P};
 enum outstyle style = OUT_READABLE;
 int inFirstLineREM; /* 1=First line is a REM and we are on the first line */
 int onlyFirstLineREM = 0; /* 1=Only preserve codes in a first line REM, 0=Preserve codes everywhere */
@@ -29,7 +30,7 @@ int onlyFirstLineREM = 0; /* 1=Only preserve codes in a first line REM, 0=Preser
 char *charset_read[] =
 {
 /* 000-009 */ " ","▘","▝","▀","▖","▌","▞","▛","▒","\\,,",
-/* 010-019 */ "\\\"\"","\"","£","$",":","?","(",")",">","<",
+/* 010-019 */ "\\~~","\"","£","$",":","?","(",")",">","<",
 /* 020-029 */ "=","+","-","*","/",";",",",".","0","1",
 /* 030-039 */ "2","3","4","5","6","7","8","9","A","B",
 /* 040-049 */ "C","D","E","F","G","H","I","J","K","L",
@@ -41,7 +42,7 @@ char *charset_read[] =
 /* 100-109 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
 /* 110-119 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
 /* 120-129 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,"█","▟",
-/* 130-139 */ "▙","▄","▜","▐","▚", "▗","[▒]","[,,]","[\"\"]","[\"]",
+/* 130-139 */ "▙","▄","▜","▐","▚", "▗","[▒]","[,,]","[~~]","[\"]",
 /* 140-149 */ "[£]","[$]","[:]","[?]","[(]","[)]","[>]","[<]","[=]","[+]",
 /* 150-159 */ "[-]","[*]","[/]","[;]","[,]","[.]","[0]","[1]","[2]","[3]",
 /* 160-169 */ "[4]","[5]","[6]","[7]","[8]","[9]","[A]","[B]","[C]","[D]",
@@ -105,12 +106,12 @@ char *charset_zmb[] =
 /* 040-049 */ "C","D","E","F","G","H","I","J","K","L",
 /* 050-059 */ "M","N","O","P","Q","R","S","T","U","V",
 /* 060-069 */ "W","X","Y","Z","RND","INKEY$ ","PI",NAK,NAK,NAK,
-/* 070-079 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
-/* 080-089 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
-/* 090-099 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
-/* 100-109 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
-/* 110-119 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
-/* 120-129 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,"\\::","\\.:",
+/* 070-079 */ NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,
+/* 080-089 */ NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,
+/* 090-099 */ NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,
+/* 100-109 */ NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,
+/* 110-119 */ NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,
+/* 120-129 */ NAK,NAK,NAK,NAK,NAK,NAK,NAK,NAK,"\\::","\\.:",
 /* 130-139 */ "\\:.","\\..","\\':","\\ :","\\'.", "\\ .","\\|:","\\|.","\\|'","\\\"",
 /* 140-149 */ "\\@","\\$","\\:","\\?","\\(","\\)","\\>","\\<","\\=","\\+",
 /* 150-159 */ "\\-","\\*","\\/","\\;","\\,","\\.","\\0","\\1","\\2","\\3",
@@ -118,6 +119,42 @@ char *charset_zmb[] =
 /* 170-179 */ "e","f","g","h","i","j","k","l","m","n",
 /* 180-189 */ "o","p","q","r","s","t","u","v","w","x",
 /* 190-199 */ "y","z","`","AT ","TAB ",NAK,"CODE ","VAL ","LEN ","SIN ",
+/* 200-209 */ "COS ","TAN ","ASN ","ACS ","ATN ","LN ","EXP ",
+		"INT ","SQR ","SGN ",
+/* 210-219 */ "ABS ","PEEK ","USR ","STR$ ","CHR$ ","NOT ",
+		"**"," OR "," AND ","<=",
+/* 220-229 */ ">=","<>"," THEN"," TO "," STEP "," LPRINT ",
+		" LLIST "," STOP"," SLOW"," FAST",
+/* 230-239 */ " NEW"," SCROLL"," CONT "," DIM "," REM "," FOR "," GOTO ",
+		" GOSUB "," INPUT "," LOAD ",
+/* 240-249 */ " LIST "," LET "," PAUSE "," NEXT "," POKE ",
+		" PRINT "," PLOT "," RUN "," SAVE ",
+		" RAND ",
+/* 250-255 */ " IF "," CLS"," UNPLOT "," CLEAR"," RETURN"," COPY"
+};
+
+char *charset_zxtext2p[] =
+{
+/* 000-009 */ " ","\\' ","\\ '","\\''","\\. ","\\: ","\\.'","\\:'","\\##","\\,,",
+/* 010-019 */ "\\~~","\"","#","$",":","?","(",")",">","<",
+/* 020-029 */ "=","+","-","*","/",";",",",".","0","1",
+/* 030-039 */ "2","3","4","5","6","7","8","9","A","B",
+/* 040-049 */ "C","D","E","F","G","H","I","J","K","L",
+/* 050-059 */ "M","N","O","P","Q","R","S","T","U","V",
+/* 060-069 */ "W","X","Y","Z","RND","INKEY$ ","PI",NAK2,NAK2,NAK2,
+/* 070-079 */ NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,
+/* 080-089 */ NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,
+/* 090-099 */ NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,
+/* 100-109 */ NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,
+/* 110-119 */ NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,
+/* 120-129 */ NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,NAK2,"\\::","\\.:",
+/* 130-139 */ "\\:.","\\..","\\':","\\ :","\\'.", "\\ .","\\@@","\\;;","\\!!","%\"",
+/* 140-149 */ "%#","%$","%:","%?","%(","%)","%>","%<","%=","%+",
+/* 150-159 */ "%-","%*","%/","%;","%,","%.","%0","%1","%2","%3",
+/* 160-169 */ "%4","%5","%6","%7","%8","%9","%A","%B","%C","%D",
+/* 170-179 */ "%E","%F","%G","%H","%I","%J","%K","%L","%M","%N",
+/* 180-189 */ "%O","%P","%Q","%R","%S","%T","%U","%V","%W","%X",
+/* 190-199 */ "%Y","%Z","\\\"","AT ","TAB ",NAK2,"CODE ","VAL ","LEN ","SIN ",
 /* 200-209 */ "COS ","TAN ","ASN ","ACS ","ATN ","LN ","EXP ",
 		"INT ","SQR ","SGN ",
 /* 210-219 */ "ABS ","PEEK ","USR ","STR$ ","CHR$ ","NOT ",
@@ -230,7 +267,8 @@ void print_usage ()
   printf("  -z  Output Zmakebas compatible markup\n");
   printf("  -r  Output a more readable markup (default).\n");
   printf("      Inverse characters in square brackets, most block graphics.\n");
-  printf("  -1  Output Zmakebas markup but only use codes in a first line that is a REM.");
+  printf("  -1  Output Zmakebas markup but only use codes in a first line that is a REM.\n");
+  printf("  -2  Output ZXText2P compatible markup\n");
   printf("The Zmakebas output will use \\{xxx} codes in REMs and quotes to preserve\n");
   printf("the non-printable and token character codes, whereas in readable mode, these\n");
   printf("will give a hash (#) character. Zmakebas mode also inserts inverse and true\n");
@@ -242,7 +280,7 @@ void parse_options(int argc, char *argv[])
 {
     int opt = 0;
 
-    while ((opt = getopt(argc, argv, "zr1")) != -1)
+    while ((opt = getopt(argc, argv, "zr12")) != -1)
         {
         switch (opt)
             {
@@ -260,6 +298,11 @@ void parse_options(int argc, char *argv[])
                 style = OUT_ZMAKEBAS;
                 charset = charset_zmb;
                 onlyFirstLineREM = 1;
+                break;
+            case '2':
+                style = OUT_ZXTEXT2P;
+                charset = charset_zxtext2p;
+                onlyFirstLineREM = 0;
                 break;
             default:
                 print_usage();

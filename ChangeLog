@@ -1,3 +1,8 @@
+2023-03-28 ryangray
+    * Added ZXText2P output style to p2txt via the "-2" option
+    * Borrowed a few of the ZXText2P graphic escapes to replace those in the 
+      "-r" readable style output.
+
 2023-02-06 ryangray
     * Added p2spectrum utility to convert a ZX81 BASIC program in a .p file to
       a ZX Spectrum BASIC program in a text file, either zmakebas compatible or

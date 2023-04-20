@@ -8,7 +8,7 @@
   14 REM Q W E R T Y
   15 REM ▟ ▙ ▛ ▜ ▞ ▚
   17 REM A S D F G H
-  18 REM ▒ \"" \,, [""] [,,] [▒]
+  18 REM ▒ \~~ \,, [~~] [,,] [▒]
   20 REM SPECIAL
   21 REM "" QUOTE IMAGE
   22 LET B$="HE SAID, ""STOP""."

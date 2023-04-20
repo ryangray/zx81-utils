@@ -2,18 +2,19 @@
 
 This is forked from [Mike Ralphson's zx81-utils][ralphson] on GitHub and 
 modified by [Ryan Gray][zx81-utils]. It changes the readable output of 
-[`p2txt`](#p2txt) and adds a [zmakebas][] compatible output option. The 
-[`p2spectrum`](#p2spectrum) utility has also been added.
+[`p2txt`](#p2txt) and adds a [zmakebas][] and [ZXText2P][] compatible output 
+options. The [`p2spectrum`](#p2spectrum) utility has also been added.
 
 [ralphson]: https://github.com/MikeRalphson/zx81-utils
 [zx81-utils]: https://github.com/ryangray/zx81-utils
 [zmakebas]: https://github.com/ryangray/zmakebas
+[ZXText2P]: http://freestuff.grok.co.uk/zxtext2p/index.html
 
 # p2txt
 
 Extracts the ZX81 BASIC listing from a .p file. It can give a version compatible
-with [zmakebas][] or a more readable style. Output is to standard output, so you
-can redirect to a file if you wish:
+with [zmakebas][], [ZXText2P][], or a more readable style. Output is to 
+standard output, so you can redirect to a file if you wish:
 
     p2txt filename.p > filename.txt
 
@@ -34,15 +35,19 @@ in a text file.
 
 ## Usage
 
+### Readable Style
+
 For the readable style (which is the default):
 
     p2txt -r filename.p
 
 This will show the pound symbol as £, the quote image as "", the block graphics 
 characters as block graphics, and inverse characters as enclosed in square 
-brackets. The block graphics with half grey parts show as \"" for upper half,
-\,, for lower half, and their inverses are [""] and [,,]. Other non-printable
+brackets. The block graphics with half grey parts show as \~~ for upper half,
+\,, for lower half, and their inverses are [~~] and [,,]. Other non-printable
 characters print as a hash symbol, #.
+
+### ZMakeBas Style
 
 For the zmakebas style:
 
@@ -50,8 +55,8 @@ For the zmakebas style:
 
 This uses the conventions of zmakebas so that the output can be run through it
 to reconstruct the .p file. It uses lowercase letters for inverse letters with a 
-backslash before most other inverse characters. The quote image is a backtick, 
-the pound symbol is a double backslash, and its inverse is \@. 
+backslash before most other inverse characters. The quote image is a backtick 
+(\`), the pound symbol is a double backslash (\\\\), and its inverse is `\@`. 
 
 The block graphics are a backslash before two symbols depicting the graphic shape:
 
@@ -80,6 +85,30 @@ were used in a comparison to an `INKEY$` result:
 You would need to preserve tokens, manually insert the token code escape, or 
 change the comparison to test the `CODE` of the string instead.
 
+### ZXText2P Style
+
+For the ZXText2P style:
+
+    p2txt -2 filename.p
+
+This is mostly the same as ZMakeBas style, but changes the grey graphics blocks:
+
+    Grey solid:    \##      Inverse: \@@
+    Grey top-half: \~~      Inverse: \!!
+    Grey bot-half: \,,      Inverse: \;;
+
+The pound Sterling symbol is just `#`, so we change the non-printable character
+from `#` to `!` since ZXText2P doesn't seem to have the escaped character code
+notation that ZMakeBas does.
+
+The inverse characters are all just `%` in front of the normal character.
+
+It appears it can't do graphics escapes in REMs. It says there's a character it
+can't translate, so it's not interpreting the backslash there. Looking at the 
+code, it dosn't interpret `%` for inverse characters either. I don't know why it 
+qualifies eithr of these to not be in a REM since the neither the `%` nor the `\`
+are ZX81 characters that you woulld encounter in a REM anyway. I could just 
+compile it without the condition check.
 
 # p2spectrum
 
