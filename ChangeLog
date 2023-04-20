@@ -1,3 +1,8 @@
+2023-04-20 ryangray
+    * Add version numbers to p2txt (1.1.0) and p2spectrum (1.0.0). I'm calling
+      p2txt 1.1.0 considering it to be a mod to the original that I'm treating 
+      as 1.0.0. 
+
 2023-03-28 ryangray
     * Added ZXText2P output style to p2txt via the "-2" option
     * Borrowed a few of the ZXText2P graphic escapes to replace those in the 

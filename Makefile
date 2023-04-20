@@ -1,13 +1,14 @@
 IDIR=.
 CC=gcc
 
-#Compiler flags
-#if mode variable is empty, setting debug build mode
+# Compiler flags
+
+# make mode=debug
 ifeq ($(mode),debug)
-   CFLAGS = -g -Wall -I$(IDIR)
+	CFLAGS = -g -Wall -I$(IDIR)
 else
-   mode = debug
-   CFLAGS = -Wall -I$(IDIR)
+	mode = release
+	CFLAGS = -Wall -I$(IDIR)
 endif
 
 all: p2txt p2spectrum test1p2t test1p2s

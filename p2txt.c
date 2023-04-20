@@ -1,6 +1,7 @@
 /* p2txt - list the BASCI program in an xtender/Z81 format .p file
  * PD by RJM 1993
  * cleaned up and ansified 960504
+ * Forked by ryangray Jan2023
  */
 
 
@@ -14,6 +15,7 @@
 #define NUM_code 126
 #define REM_code 234
 #define NAK2 "!"
+#define VERSION "1.1.0"
 
 unsigned char linebuf[32768]; /* BIG buffer for those lovely m/c REMs */
 char *infile;
@@ -260,7 +262,8 @@ while (total >= 0)
 
 void print_usage ()
   {
-  printf("P2txt by Ryan Gray, from original by Russell Marks for improbabledesigns\n");
+  printf("P2txt %s by Ryan Gray, from original by Russell Marks \n", VERSION);
+  printf("    for improbabledesigns.\n");
   printf("Lists ZX81 .P files to stdout.\n");
   printf("Usage:  p2txt [options] infile.p > outfile.txt\n");
   printf("Options are:\n");

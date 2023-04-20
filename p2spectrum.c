@@ -27,6 +27,8 @@
 #include <string.h>
 #include <unistd.h> /* for getopt */
 
+#define VERSION "1.0.0"
+
 /* Some ZX81 character codes we reference */
 #define K_QUOTE      11
 #define K_DOLLAR     13
@@ -184,7 +186,7 @@ char *charset_read[] =
 
 char **charset = charset_zmb;
 
-/* Styles of output. Later we will have a command switch for it */
+/* Styles of output. Selectable by command line options. */
 enum outstyle {OUT_READABLE, OUT_ZMAKEBAS};
 enum outstyle style = OUT_ZMAKEBAS;
 
@@ -297,7 +299,7 @@ void writeSubs (int linenum)
         }
     if ( udg_flag && udg_sub && ! udg_sub_w && linenum > udg_sub )
         {
-        printf("%4d RESTORE %d: LET U=USR\"a\": REM Init grey UDGs\n", udg_sub, udg_sub+3);
+        printf("%4d RESTORE %d: LET U=USR \"a\": REM Init grey UDGs\n", udg_sub, udg_sub+3);
         printf("%4d FOR A=0 TO 47 STEP 4: READ B,C\n", udg_sub+1);
         printf("%4d POKE U+A,B: POKE U+A+1,C: POKE U+A+2,B: POKE U+A+3,C: NEXT A: RETURN\n", udg_sub+2);
         printf("%4d DATA 170,85,170,85,170,85,0,0,0,0,170,85,85,170,255,255,255,255,85,170,85,170,85,170\n", udg_sub+3);
@@ -553,7 +555,7 @@ void processFile (FILE *in)
 
 void printUsage ()
 {
-    printf("P2spectrum by Ryan Gray\n");
+    printf("P2spectrum %s by Ryan Gray\n", VERSION);
     printf("Translates a ZX81 .P file program to Spectrum BASIC text.\n");
     printf("Usage:  p2spectrum [options] infile.p > outfile.txt\n");
     printf("Options are:\n");
