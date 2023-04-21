@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #define NAK "#"
 #define QUOTE_code 11
@@ -26,13 +25,50 @@ int onlyFirstLineREM = 0; /* 1=Only preserve codes in a first line REM, 0=Preser
 
 /************** the zx81 char set as transposed to ascii ***************/
 
-/* nak = 'not a kharacter', of course! :-) */
-/* spacing may not end up being *exactly* the same, but is very close */
+/* Define character strings for DOS Code Page 437 */
+#ifdef __MSDOS__
+#define POUND "\x9C"
+#define BLK "\xDB"
+#define BTM "\xDC"
+#define BUL "\\' "
+#define BUR "\\ '"
+#define TOP "\xDF"
+#define BLF "\xDD"
+#define BRT "\xDE"
+#define BGY "\xB1"
+#define BUP "\\.'"
+#define BDN "\\'."
+#define BLL "\\. "
+#define BLR "\\ ."
+#define ILR "\\:'"
+#define ILL "\\':"
+#define IUL "\\.:"
+#define IUR "\\:."
+#else
+#define POUND "£"
+#define BLK "█"
+#define BTM "▄"
+#define BUL "▘"
+#define BUR "▝"
+#define TOP "▀"
+#define BLF "▌"
+#define BRT "▐"
+#define BGY "▒"
+#define BUP "▞"
+#define BDN "▚"
+#define BLL "▖"
+#define BLR "▗"
+#define ILR "▛"
+#define ILL "▜"
+#define IUL "▟"
+#define IUR "▙"
+#endif
 
 char *charset_read[] =
 {
-/* 000-009 */ " ","▘","▝","▀","▖","▌","▞","▛","▒","\\,,",
-/* 010-019 */ "\\~~","\"","£","$",":","?","(",")",">","<",
+/*            spc \'  \ ' \'' \.  \:  \.' \:' \!:  \!. */
+/* 000-009 */ " ",BUL,BUR,TOP,BLL,BLF,BUP,ILR,BGY,"\\,,",
+/* 010-019 */ "\\~~","\"",POUND,"$",":","?","(",")",">","<",
 /* 020-029 */ "=","+","-","*","/",";",",",".","0","1",
 /* 030-039 */ "2","3","4","5","6","7","8","9","A","B",
 /* 040-049 */ "C","D","E","F","G","H","I","J","K","L",
@@ -43,9 +79,10 @@ char *charset_read[] =
 /* 090-099 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
 /* 100-109 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
 /* 110-119 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
-/* 120-129 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,"█","▟",
-/* 130-139 */ "▙","▄","▜","▐","▚", "▗","[▒]","[,,]","[~~]","[\"]",
-/* 140-149 */ "[£]","[$]","[:]","[?]","[(]","[)]","[>]","[<]","[=]","[+]",
+/* 120-129 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,BLK,IUL, /* \:: \.: */
+/*            \:. \.. \': \ : \'.  \ .     \|: */
+/* 130-139 */ IUR,BTM,ILL,BRT,BDN, BLR,"[" BGY "]","[,,]","[~~]","[\"]",
+/* 140-149 */ "[" POUND "]","[$]","[:]","[?]","[(]","[)]","[>]","[<]","[=]","[+]",
 /* 150-159 */ "[-]","[*]","[/]","[;]","[,]","[.]","[0]","[1]","[2]","[3]",
 /* 160-169 */ "[4]","[5]","[6]","[7]","[8]","[9]","[A]","[B]","[C]","[D]",
 /* 170-179 */ "[E]","[F]","[G]","[H]","[I]","[J]","[K]","[L]","[M]","[N]",
@@ -281,11 +318,9 @@ void print_usage ()
 
 void parse_options(int argc, char *argv[])
 {
-    int opt = 0;
-
-    while ((opt = getopt(argc, argv, "zr12")) != -1)
+    while ((argc > 1) && (argv[1][0] == '-'))
         {
-        switch (opt)
+        switch (argv[1][1])
             {
             case 'z':
                 style = OUT_ZMAKEBAS;
@@ -311,14 +346,15 @@ void parse_options(int argc, char *argv[])
                 print_usage();
                 exit(EXIT_FAILURE);
             }
+	    ++argv;
+	    --argc;
         }
     if (argc <= 1)
         {
         print_usage();
         exit(EXIT_FAILURE);
         }
-    if (optind < argc)
-        infile = argv[optind];
+    infile = argv[argc-1];
 }
 
 

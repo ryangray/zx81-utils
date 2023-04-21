@@ -1,4 +1,4 @@
-/* hex2zmbrem - Convert a file of hex codes to a zmakebas text file of one REM statement
+/* hex2rem - Convert a file of hex codes to a zmakebas text file of one REM statement
  * By Ryan Gray April 2023
  */
 
