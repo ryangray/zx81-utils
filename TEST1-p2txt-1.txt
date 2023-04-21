@@ -5,8 +5,8 @@
   10 REM BLOCK GRAPHICS
   11 REM 1 2 3 4 5 6 7 8
   12 REM \'  \ ' \ . \.  \:  \.. \'' \ :
-  14 REM Q W E R T Y
-  15 REM \.: \:. \:' \': \.' \'.
+  14 REM Q W E R T Y SPACE
+  15 REM \.: \:. \:' \': \.' \'.   \::
   17 REM A S D F G H
   18 REM \!: \!' \!. \|' \|. \|:
   20 REM SPECIAL
@@ -21,6 +21,8 @@
   33 REM \0\1\2\3\4\5\6\7\8\9
   34 REM \$\(\)\"\-\+\=\:\;\?\/\*\<\>\.\,
   35 REM \@ INVERSE POUND
+  36 REM ** inverse runs **
+  37 REM MIXED tIlEz
   40 LET REF=65*256+40
   50 PRINT "MC RESULT SHOULD BE ";REF;"."
   60 LET MC=USR 16523

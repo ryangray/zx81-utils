@@ -210,10 +210,12 @@ The differences in ZX81 and Spectrum BASIC are handled by:
 * Inverse characters
 
     These are shown in two ways. For the `-r` option for more readable output,
-    inverse characters are shown each enclosed in square brackets. Letters are 
+    inverse characters are shown enclosed in square brackets, with letters in 
     uppercase. For the `-z` zmakebas output option, the characters are made 
     inverse by inserting the inverse video and true video attribute characters
-    before and after the character.
+    before and after the characters. Groups of consecutive inverse characters
+    are enclosed in a single pair of square brackets (`-r`) or inverse/true 
+    video codes. 
 
 * Miscelaneous
 

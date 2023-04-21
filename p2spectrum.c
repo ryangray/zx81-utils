@@ -169,7 +169,7 @@ char *charset_read[] =
 /* 100-109 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       NAK,      NAK,
 /* 110-119 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       NAK,      NAK,
 /* 120-129 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       "█",      "▟",
-/* 130-139 */ "▙",     "▄",      "▜",         "▐",     "▚",      "▗",       "[▒]",    "[,,]",    "[\"\"]", "[\"]",
+/* 130-139 */ "▙",     "▄",      "▜",         "▐",     "▚",      "▗",       "▒",    ",,",    "\"\"", "\"",
 /* 140-149 */ "£",     "$",      ":",         "?",     "(",      ")",       ">",      "<",       "=",      "+",
 /* 150-159 */ "-",     "*",      "/",         ";",     ",",      ".",       "0",      "1",       "2",      "3",
 /* 160-169 */ "4",     "5",      "6",         "7",     "8",      "9",       "A",      "B",       "C",      "D",
@@ -368,7 +368,7 @@ void translateLine (int linelen, int linenum)
      * applying any translation transforms.
      */
 
-    int f, inQuotes = 0;
+    int f, inQuotes = 0, inInverse = 0;
     unsigned char c, keyword = linebuf[0];
     char *x;
     int parens   = 0; /* Track parens level */
@@ -393,6 +393,7 @@ void translateLine (int linelen, int linenum)
         if ( c == K_NUMBER )
             {
             f += 5;  /* avoid inline FP numbers */
+            inInverse = 0;
             }
         else if ( f == 0 ) /* On the keyword character */
             {
@@ -423,21 +424,43 @@ void translateLine (int linelen, int linenum)
             if ( !inQuotes && c == K_LPAREN ) parens++;
             if ( !inQuotes && c == K_RPAREN ) parens--;
 
+            if (inInverse && ( c < (139-3*(style==OUT_READABLE)) || c > 191) )
+                {
+                /* Non-inverse character - discontinue inverse mode if on */
+                inInverse = 0;
+                if ( style == OUT_ZMAKEBAS )
+                    printf("\\{20}\\{0}");
+                else
+                    printf("]");
+                }
+
             if ( (plot_p || unplot_p) && !inQuotes && parens == 0 && !comma && c == K_COMMA )
                 {
                 /* The comma separating the x,y values in plot or unplot command */
                 comma = 1;
                 printf("),4*(");
                 }
-            else if ( (c >= 8 && c <= 10) || ( c >= 136 && c <= 138) ) /* Grey block graphics character */
+            else if ( (c >= 8 && c <= 10) || ( style==OUT_ZMAKEBAS && c >= 136 && c <= 138) ) /* Grey block graphics character */
                 {
                 printf("%s", x);
                 }
-            else if ( c >= 139 && c <= 191) /* Inverse character */
+            else if ( c >= (139-3*(style==OUT_READABLE)) && c <= 191) /* Inverse character */
                 {
-                if ( keyword == K_SAVE )            printf("%s", x);
-                else if ( style == OUT_ZMAKEBAS )   printf("\\{20}\\{1}%s\\{20}\\{0}", x);
-                else                                printf("[%s]", x);
+                if ( keyword == K_SAVE ) /* Don't switch to inverse mode */
+                    {
+                    printf("%s", x);
+                    }
+                else if (inInverse)
+                    printf("%s", x); /* continue in inverse */
+                else
+                    {
+                    /* Switch to inverse mode */
+                    inInverse = 1;
+                    if ( style == OUT_ZMAKEBAS )
+                        printf("\\{20}\\{1}%s", x);
+                    else
+                        printf("[%s", x);
+                    }
                 }
             else if ( keyword != K_REM && !inQuotes ) /* Only if used */
                 {
@@ -464,7 +487,17 @@ void translateLine (int linelen, int linenum)
                 }
             }
         }
-            
+
+    if (inInverse)
+        {
+        /* End of line - discontinue inverse mode if on */
+        inInverse = 0;
+        if ( style == OUT_ZMAKEBAS )
+            printf("\\{20}\\{0}");
+        else
+            printf("]");
+        }
+
     /* Append any post stuff needed */
 
     if ( keyword == K_SAVE ) /* Check for autorun SAVE */

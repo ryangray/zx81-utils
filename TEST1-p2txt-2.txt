@@ -1,28 +1,28 @@
-   1 REM Z80 CODE:\' C\{65}\{201}
+   1 REM Z80 CODE:\' CINKEY$ TAN 
    2 REM REM CODES: 1,40,65,201
-   3 LET A$="CODES IN \{213}"
-   4 LET B$="\{234}IN A STRING"
+   3 LET A$="CODES IN STR$ "
+   4 LET B$=" REM IN A STRING"
   10 REM BLOCK GRAPHICS
   11 REM 1 2 3 4 5 6 7 8
   12 REM \'  \ ' \ . \.  \:  \.. \'' \ :
   14 REM Q W E R T Y SPACE
   15 REM \.: \:. \:' \': \.' \'.   \::
   17 REM A S D F G H
-  18 REM \!: \!' \!. \|' \|. \|:
+  18 REM \## \~~ \,, \!! \;; \@@
   20 REM SPECIAL
-  21 REM ` QUOTE IMAGE
-  22 LET B$="HE SAID, `STOP`."
-  23 REM \\ POUND STERLING
+  21 REM \" QUOTE IMAGE
+  22 LET B$="HE SAID, \"STOP\"."
+  23 REM # POUND STERLING
   24 LET Y=2**3
-  25 LET C$="\{216}STARS\{216}"
+  25 LET C$="**STARS**"
   30 REM INVERSES
-  31 REM abcdefghijklm
-  32 REM nopqrstuvwxyz
-  33 REM \0\1\2\3\4\5\6\7\8\9
-  34 REM \$\(\)\"\-\+\=\:\;\?\/\*\<\>\.\,
-  35 REM \@ INVERSE POUND
-  36 REM ** inverse runs **
-  37 REM MIXED tIlEz
+  31 REM %A%B%C%D%E%F%G%H%I%J%K%L%M
+  32 REM %N%O%P%Q%R%S%T%U%V%W%X%Y%Z
+  33 REM %0%1%2%3%4%5%6%7%8%9
+  34 REM %$%(%)%"%-%+%=%:%;%?%/%*%<%>%.%,
+  35 REM %# INVERSE POUND
+  36 REM ** %I%N%V%E%R%S%E %R%U%N%S **
+  37 REM MIXED %TI%LE%Z
   40 LET REF=65*256+40
   50 PRINT "MC RESULT SHOULD BE ";REF;"."
   60 LET MC=USR 16523
