@@ -3,7 +3,8 @@
 This is forked from [Mike Ralphson's zx81-utils][ralphson] on GitHub and 
 modified by [Ryan Gray][zx81-utils]. It changes the readable output of 
 [`p2txt`](#p2txt) and adds a [zmakebas][] and [ZXText2P][] compatible output 
-options. The [`p2spectrum`](#p2spectrum) utility has also been added.
+options. The [`p2spectrum`](#p2spectrum) and [`hex2rem`](#hex2rem) utilities 
+have also been added.
 
 [ralphson]: https://github.com/MikeRalphson/zx81-utils
 [zx81-utils]: https://github.com/ryangray/zx81-utils
@@ -220,3 +221,34 @@ The differences in ZX81 and Spectrum BASIC are handled by:
       `^` except in `REM` statements and strings where it is rendered as two
       asterisks since those contexts would be using the ZX81 visual 
       representation.
+
+# hex2rem
+
+This lets you generate a REM line in a text file from hex codes or a binary file
+that you can run through [zmakebas][] to create a line of (presumably) machine
+code. This utility can also be used for ZX Spectrum and TS2068 code since it
+creates a zmakebas input file with nothing particular to either machine, you 
+would just use the zmakebas `-p` option when making a `.p` file for the ZX81 or
+TS1000.
+
+For example, you could use a Z80 assembler to assemble code designed for
+an origin of 16514 for the ZX81, assemble that to a binary file, then use 
+`hex2rem` to turn it into a REM line. Then add any other BASIC code to the 
+file and run through `zmakebas`.
+
+## Usage
+
+    hex2rem [-h|-b] input_file > output_file
+
+Note that `input_file` can be "." to use standard input.
+
+* `-h` : Input are hex values in a text file. These can be on multiple lines,
+    and whitespace is ignored between hex digit pairs.
+
+* `-b` : Input is a binary file.
+
+The output is written as one `REM` line with continuation breaks every 10 values
+(a backsash at the ends of the continuing lines). Each value is written with the
+zmakebas literal code escape notation using a hex value:
+
+    \{0xab}
