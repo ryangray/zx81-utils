@@ -1,4 +1,4 @@
-/* p2txt - list the BASCI program in an xtender/Z81 format .p file
+/* p2txt - list the BASIC program in an xtender/Z81 format .p file
  * PD by RJM 1993
  * cleaned up and ansified 960504
  * Forked by ryangray Jan2023
@@ -14,7 +14,7 @@
 #define NUM_code 126
 #define REM_code 234
 #define NAK2 "!"
-#define VERSION "1.1.0"
+#define VERSION "1.0.1"
 
 unsigned char linebuf[32768]; /* BIG buffer for those lovely m/c REMs */
 char *infile;
@@ -258,7 +258,13 @@ for (f = 0; f < linelen - 1; f++)
         {
         if ( style == OUT_ZMAKEBAS && (!onlyFirstLineREM || inFirstLineREM) &&
                 ((strcmp(x, NAK) == 0) || ((strlen(x) > 1) && (x[0] != '\\') && (x[0]!='`'))) )
+
             printf("\\{%d}", c); /* Print escaped as char code */
+
+        else if ( style == OUT_ZXTEXT2P && inFirstLineREM && ((c>63 && c<128) || c>191) )
+
+            printf("\\%02X", c); /* Print as backslash-escaped hex code */
+
         else
             printf("%s", x); /* Print translated char */
         }

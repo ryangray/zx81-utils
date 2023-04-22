@@ -98,18 +98,21 @@ This is mostly the same as ZMakeBas style, but changes the grey graphics blocks:
     Grey top-half: \~~      Inverse: \!!
     Grey bot-half: \,,      Inverse: \;;
 
-The pound Sterling symbol is just `#`, so we change the non-printable character
-from `#` to `!` since ZXText2P doesn't seem to have the escaped character code
-notation that ZMakeBas does.
-
-The inverse characters are all just `%` in front of the normal character.
+The pound Sterling symbol is just `#`, so the non-printable character changes
+from `#` to `!`. The inverse characters are all just `%` in front of the normal 
+character.
 
 It appears it can't do graphics escapes in REMs. It says there's a character it
 can't translate, so it's not interpreting the backslash there. Looking at the 
-code, it dosn't interpret `%` for inverse characters either. I don't know why it 
-qualifies eithr of these to not be in a REM since the neither the `%` nor the `\`
-are ZX81 characters that you woulld encounter in a REM anyway. I could just 
-compile it without the condition check.
+code, it doesn't interpret `%` for inverse characters either. I don't know why 
+it qualifies either of these to not be in a REM since the neither the `%` nor 
+the `\` are ZX81 characters that you would encounter in a REM anyway. 
+
+There seems to be a version of ZXText2P format that will show codes in the line 
+1 REM as backslash with 2-digit hex code. I've added that but only for non-
+printable characters and tokens in the first line REM rather than printing 
+expanded tokens or `!` for a non-printable character.
+
 
 # p2spectrum
 
