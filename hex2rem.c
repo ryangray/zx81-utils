@@ -5,10 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <ctype.h>
 
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 char *infile = "";
 enum input_style {IN_HEX, IN_BINARY};
@@ -17,9 +16,9 @@ enum input_style in_fmt = IN_HEX;
 
 void print_usage ()
   {
-  printf("hex2zmbrem %s by Ryan Gray\n", VERSION);
+  printf("hex2rem %s by Ryan Gray\n", VERSION);
   printf("Make a one-line REM statement from hex codes for zmakebas input.\n");
-  printf("Usage:  hex2zmbrem [options] infile > outfile\n");
+  printf("Usage:  hex2rem [options] infile > outfile\n");
   printf("Options are:\n");
   printf("  -h  Input is ASCII hex codes (default)\n");
   printf("  -b  Input is a binary file.\n");
@@ -31,11 +30,9 @@ void print_usage ()
 
 void parse_options(int argc, char *argv[])
 {
-    int opt = 0;
-
-    while ((opt = getopt(argc, argv, "hb")) != -1)
+    while ((argc > 1) && (argv[1][0] == '-'))
         {
-        switch (opt)
+        switch (argv[1][1])
             {
             case 'h':
                 in_fmt = IN_HEX;
@@ -47,18 +44,19 @@ void parse_options(int argc, char *argv[])
                 print_usage();
                 exit(EXIT_FAILURE);
             }
+	    ++argv;
+	    --argc;
         }
     if (argc <= 1)
         {
         print_usage();
         exit(EXIT_FAILURE);
         }
-    if (optind < argc)
-        infile = argv[optind];
+    infile = argv[argc-1];
 }
 
-#define BUFFLEN 32768
-#define WRAP 10
+#define BUFFLEN 16384 /* Above this causes problems on DOS w/Turbo C++ 3  and is only */
+#define WRAP 10 /* How many codes per line */
 
 int main(int argc,char *argv[])
 {
@@ -69,6 +67,7 @@ char buff[BUFFLEN], *ptr;
 parse_options(argc, argv);
 
 if ( strcmp(infile,".") == 0 )
+
     in = stdin;
 
 else
