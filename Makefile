@@ -11,12 +11,12 @@ else
 	CFLAGS = -Wall -I$(IDIR)
 endif
 
-all: p2txt p2spectrum p2t-test1 p2s-test1 hex2rem hex2rem-test1
+all: p2txt p2speccy p2t-test1 p2s-test1 hex2rem hex2rem-test1
 
 p2txt: p2txt.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
-p2spectrum: p2spectrum.o
+p2speccy: p2speccy.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
 hex2rem: hex2rem.o
@@ -45,16 +45,16 @@ TEST1-p2txt-z.txt: p2txt TEST1.p
 TEST1-p2txt-2.txt: p2txt TEST1.p
 	./p2txt -2 TEST1.p > TEST1-p2txt-2.txt
 
-p2s-test1: TEST1-p2spectrum-r.txt TEST1-p2spectrum-z.txt TEST1-p2spectrum.tap
+p2s-test1: TEST1-p2speccy-r.txt TEST1-p2speccy-z.txt TEST1-p2speccy.tap
 
-TEST1-p2spectrum-z.txt: p2spectrum TEST1.p
-	./p2spectrum -z TEST1.p > TEST1-p2spectrum-z.txt
+TEST1-p2speccy-z.txt: p2speccy TEST1.p
+	./p2speccy -z TEST1.p > TEST1-p2speccy-z.txt
 
-TEST1-p2spectrum-r.txt: p2spectrum TEST1.p
-	./p2spectrum -r TEST1.p > TEST1-p2spectrum-r.txt
+TEST1-p2speccy-r.txt: p2speccy TEST1.p
+	./p2speccy -r TEST1.p > TEST1-p2speccy-r.txt
 
-TEST1-p2spectrum.tap: TEST1-p2spectrum-z.txt
-	zmakebas -n TEST1 -o TEST1-p2spectrum.tap TEST1-p2spectrum-z.txt
+TEST1-p2speccy.tap: TEST1-p2speccy-z.txt
+	zmakebas -n TEST1 -o TEST1-p2speccy.tap TEST1-p2speccy-z.txt
 
 hex2rem-test1: hex2rem_test.bas hex2rem_test.p
 

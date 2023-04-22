@@ -114,7 +114,7 @@ printable characters and tokens in the first line REM rather than printing
 expanded tokens or `!` for a non-printable character.
 
 
-# p2spectrum
+# p2speccy
 
 A utility to convert a ZX81 (or Timex Sinclair 1000) BASIC program in a .p file 
 to a ZX Spectrum (or Timex Sinclair 2068) BASIC program in a text file. You can
@@ -125,8 +125,8 @@ machine.
 
 ## Usage
 
-    p2spectrum -r filename.p > filename.txt
-    p2spectrum -z filename.p > filename.txt
+    p2speccy -r filename.p > filename.txt
+    p2speccy -z filename.p > filename.txt
 
 The `-r` option give a more readable output form with block graphics characters 
 (for most), and brackets around inverse characters. The `-z` output option (the 
@@ -227,6 +227,7 @@ The differences in ZX81 and Spectrum BASIC are handled by:
       asterisks since those contexts would be using the ZX81 visual 
       representation.
 
+
 # hex2rem
 
 This lets you generate a REM line in a text file from hex codes or a binary file
@@ -243,8 +244,9 @@ file and run through `zmakebas`.
 
 ## Usage
 
-    hex2rem [-h|-b] input_file > output_file
-
+    hex2rem -h input_file > output_file
+    hex2rem -b input_file > output_file
+    
 Note that `input_file` can be "." to use standard input.
 
 * `-h` : Input are hex values in a text file. These can be on multiple lines,

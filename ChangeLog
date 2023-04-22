@@ -1,3 +1,12 @@
+2023-04-22 ryangray
+    * Changing the name of p2spectrum to p2speccy so that it is 8.3 DOS friendly
+    * Renaming hex2rem_test.txt and hex2rem_test.bas to hex2rem.txt and 
+      hex2rem.bas for the same reason.
+
+2023-04-21 ryangray
+    * p2txt and hex2rem now build for DOS using Turbo C++ 3.0
+    * Changing versions to 1.0.1, for p2txt as well.
+
 2023-04-20 ryangray
     * Add version numbers to p2txt (1.1.0) and p2spectrum (1.0.0). I'm calling
       p2txt 1.1.0 considering it to be a mod to the original that I'm treating 
