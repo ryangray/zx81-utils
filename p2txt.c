@@ -305,7 +305,7 @@ while (total >= 0)
 
 void print_usage ()
   {
-  printf("P2txt %s by Ryan Gray, from original by Russell Marks \n", VERSION);
+  printf("p2txt %s by Ryan Gray, from original by Russell Marks \n", VERSION);
   printf("    for improbabledesigns.\n");
   printf("Lists ZX81 .P files to stdout.\n");
   printf("Usage:  p2txt [options] infile.p > outfile.txt\n");
