@@ -12,14 +12,15 @@
 
 char *infile = "", *outfile = "";
 enum output_style {OUT_HEX, OUT_BINARY};
-enum output_style out_fmt = OUT_HEX;
+enum output_style out_fmt = OUT_BINARY;
 
 
 void print_usage ()
   {
   printf("rem2bin %s by Ryan Gray\n", VERSION);
   printf("Extrtact codes for 1st line REM statement of a ZX81 P file program.\n");
-  printf("Usage:  rem2bin [options] infile > outfile\n");
+  printf("Usage:  rem2bin [-h|-b] infile > outfile\n");
+  printf("        rem2bin [-h|-b] -o outfile infile\n");
   printf("Options are:\n");
   printf("  -h  : Output is ASCII hex codes\n");
   printf("  -b  : Output is a binary file (default).\n");
@@ -81,16 +82,23 @@ else
         fprintf(stderr, "Error: couldn't open input file '%s'\n", infile);
         exit(EXIT_FAILURE);
         }
-    if ( out_fmt == OUT_BINARY )
-        out = fopen(outfile, "wb");
-    else
-        out = fopen(outfile, "wt");
+    }
 
-    if ( out == NULL )
-        {
-        fprintf(stderr, "Error: couldn't open output file '%s'\n", outfile);
-        exit(EXIT_FAILURE);
-        }
+if ( strcmp(outfile,"") == 0 )
+
+    out = stdout;
+
+else if ( out_fmt == OUT_BINARY )
+
+    out = fopen(outfile, "wb");
+
+else
+    out = fopen(outfile, "wt");
+
+if ( out == NULL )
+    {
+    fprintf(stderr, "Error: couldn't open output file '%s'\n", outfile);
+    exit(EXIT_FAILURE);
     }
 
 for (n = 1; n <= 116; n++) /* ignore sys vars */
