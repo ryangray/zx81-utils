@@ -1,3 +1,6 @@
+2023-04-23 ryangray
+    * New utility, rem2bin, extracts line 1 REM machine code to a file
+
 2023-04-22 ryangray
     * Adjustments to make p2speccy compile for DOS:
         - Make a conditional compile set of characters for code page 437 or Unicode

@@ -3,8 +3,12 @@
 This is forked from [Mike Ralphson's zx81-utils][ralphson] on GitHub and 
 modified by [Ryan Gray][zx81-utils]. It changes the readable output of 
 [`p2txt`](#p2txt) and adds a [zmakebas][] and [ZXText2P][] compatible output 
-options. The [`p2spectrum`](#p2spectrum) and [`hex2rem`](#hex2rem) utilities 
-have also been added.
+options. Other utilities have been added.
+
+* [`p2txt`](#p2txt) - Extract listing from .p file
+* [`p2spectrum`](#p2spectrum) - Convert program in .p file to ZX Spectrum BASIC
+* [`hex2rem`](#hex2rem) - Convert hex or binary file to a line 1 REM zmakebas text
+* [`rem2bin`](#rem2bin) - Extract machine code in line 1 REM to a file
 
 [ralphson]: https://github.com/MikeRalphson/zx81-utils
 [zx81-utils]: https://github.com/ryangray/zx81-utils
@@ -246,18 +250,50 @@ file and run through `zmakebas`.
 
 ## Usage
 
-    hex2rem -h input_file > output_file
-    hex2rem -b input_file > output_file
+    hex2rem [-h|-b] input_file > output_file
+    hex2rem [-h|-b] -o output_file input_file
     
-Note that `input_file` can be "." to use standard input.
-
 * `-h` : Input are hex values in a text file. These can be on multiple lines,
-    and whitespace is ignored between hex digit pairs.
+    and whitespace is ignored between hex digit pairs. This is the default.
 
 * `-b` : Input is a binary file.
+
+Note that `input_file` can be "." to use standard input.
 
 The output is written as one `REM` line with continuation breaks every 10 values
 (a backsash at the ends of the continuing lines). Each value is written with the
 zmakebas literal code escape notation using a hex value:
 
     \{0xab}
+
+
+# rem2bin
+
+This is the opposite of `hex2rem` but with the default of binary output. It 
+extracts the first line REM statement's content as binary code. You can opt for
+hexadecimal output instead. The REM statement number doesn't have to be `1`, but
+it does need to be the first line of the program.
+
+## Usage
+
+    rem2bin [-b|-h] input_file > output_file
+    rem2bin [-b|-h] -o output_file input_file
+
+Options:
+
+* `-b` : Output is binary (the default).
+
+* `-h` : Output is hex values as text, written 16 to a line.
+
+Note that `input_file` can be "." to use standard input.
+
+For example, if the program in a .p file has machine code in the line 1 REM 
+statement, you could extract that to a file and disassemble it:
+
+    rem2bin -o game.bin game.p
+    z80dasm -g 16514 game.bin
+
+TODO: Keep going as long as the first lines are REMs since some programs split
+the MC up between a few REMs. However, some might have comment REMs after the
+MC REMs though.
+
