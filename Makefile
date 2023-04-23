@@ -56,7 +56,7 @@ TEST1-p2speccy-r.txt: p2speccy TEST1.p
 TEST1-p2speccy.tap: TEST1-p2speccy-z.txt
 	zmakebas -n TEST1 -o TEST1-p2speccy.tap TEST1-p2speccy-z.txt
 
-hex2rem-test1: hex2rem_test.bas hex2rem_test.p
+hex2rem-test1: hex2rem.bas hex2rem.p
 
 hex2rem_test.bas: hex2rem hex2rem_test.txt
 	./hex2rem -h hex2rem_test.txt > hex2rem_test.bas

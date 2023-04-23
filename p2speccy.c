@@ -1,7 +1,6 @@
-/* p2spectrum - convert the BASIC program in a ZX81 format .p file to a
- *              ZX Spectrum BASIC text file that is compatible with Zmakebas 
+/* p2speccy - convert the BASIC program in a ZX81 format .p file to ZX Spectrum
+ *            BASIC as text that is compatible with Zmakebas 
  * Author: Ryan Gray (based on p2txt)
- * Version 1.0 4 February 2023
  * 
  * I decided to not do the keyword and function translation in the character 
  * array since we don't need to do those inside a quote or REM, so keywords in 
@@ -25,9 +24,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h> /* for getopt */
 
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 /* Some ZX81 character codes we reference */
 #define K_QUOTE      11
@@ -57,7 +55,7 @@
 #define K_RETURN    254
 
 unsigned char linebuf[32768]; /* Buffer to store a line of code */
-char *infile, *outfile;
+char *infile, *outfile = "";
 int usr_flag = 0;       /* Flags that function was used somewhere (set in 1st pass) */
 int slow_flag = 0;
 int fast_flag = 0;
@@ -83,6 +81,45 @@ long fp = 0;            /* Save file position after header is read */
 int prog_size = 0;
 int prev_k_branch = 0;  /* Was the command code of the previous line a branch or stop? */
 int prev_line = 0;      /* The previous line number */
+
+/* Define character strings for DOS Code Page 437 */
+#ifdef __MSDOS__
+#define POUND "\x9C"
+#define BLK "\xDB"
+#define BTM "\xDC"
+#define BUL "\\' "
+#define BUR "\\ '"
+#define TOP "\xDF"
+#define BLF "\xDD"
+#define BRT "\xDE"
+#define BGY "\xB1"
+#define BUP "\\.'"
+#define BDN "\\'."
+#define BLL "\\. "
+#define BLR "\\ ."
+#define ILR "\\:'"
+#define ILL "\\':"
+#define IUL "\\.:"
+#define IUR "\\:."
+#else
+#define POUND "£"
+#define BLK "█"
+#define BTM "▄"
+#define BUL "▘"
+#define BUR "▝"
+#define TOP "▀"
+#define BLF "▌"
+#define BRT "▐"
+#define BGY "▒"
+#define BUP "▞"
+#define BDN "▚"
+#define BLL "▖"
+#define BLR "▗"
+#define ILR "▛"
+#define ILL "▜"
+#define IUL "▟"
+#define IUR "▙"
+#endif
 
 /* Block Graphics escapes used by Zmakebas and listbasic:
  * 
@@ -156,8 +193,8 @@ char *charset_zmb[] =
 
 char *charset_read[] =
 {
-/* 000-009 */ " ",     "▘",      "▝",         "▀",     "▖",      "▌",       "▞",      "▛",       "▒",      "\\,,",
-/* 010-019 */ "\\\"\"","\"",     "£",         "$",     ":",      "?",       "(",      ")",       ">",      "<",
+/* 000-009 */ " ",     BUL,      BUR,         TOP,     BLL,      BLF,       BUP,      ILR,       BGY,      "\\,,",
+/* 010-019 */ "\\\"\"","\"",     POUND,       "$",     ":",      "?",       "(",      ")",       ">",      "<",
 /* 020-029 */ "=",     "+",      "-",         "*",     "/",      ";",       ",",      ".",       "0",      "1",
 /* 030-039 */ "2",     "3",      "4",         "5",     "6",      "7",       "8",      "9",       "A",      "B",
 /* 040-049 */ "C",     "D",      "E",         "F",     "G",      "H",       "I",      "J",       "K",      "L",
@@ -168,9 +205,9 @@ char *charset_read[] =
 /* 090-099 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       NAK,      NAK,
 /* 100-109 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       NAK,      NAK,
 /* 110-119 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       NAK,      NAK,
-/* 120-129 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       "█",      "▟",
-/* 130-139 */ "▙",     "▄",      "▜",         "▐",     "▚",      "▗",       "▒",    ",,",    "\"\"", "\"",
-/* 140-149 */ "£",     "$",      ":",         "?",     "(",      ")",       ">",      "<",       "=",      "+",
+/* 120-129 */ NAK,     NAK,      NAK,         NAK,     NAK,      NAK,       NAK,      NAK,       BLK,      IUL,
+/* 130-139 */ IUR,     BTM,      ILL,         BRT,     BDN,      BLR,       BGY,      ",,",      "\"\"",   "\"",
+/* 140-149 */ POUND,   "$",      ":",         "?",     "(",      ")",       ">",      "<",       "=",      "+",
 /* 150-159 */ "-",     "*",      "/",         ";",     ",",      ".",       "0",      "1",       "2",      "3",
 /* 160-169 */ "4",     "5",      "6",         "7",     "8",      "9",       "A",      "B",       "C",      "D",
 /* 170-179 */ "E",     "F",      "G",         "H",     "I",      "J",       "K",      "L",       "M",      "N",
@@ -270,39 +307,39 @@ void checkForSubs (int linenum)
         }
 }
 
-void writeSubs (int linenum)
+void writeSubs (FILE *out, int linenum)
 {
     /* Check if we need to write any routines before the next line */
 
     if ( udg_flag && udg_call && !udg_call_w && linenum > udg_call )
         {
-        printf("%4d GO SUB %d: REM Grey UDGs\n", udg_call, udg_sub);
+        fprintf(out, "%4d GO SUB %d: REM Grey UDGs\n", udg_call, udg_sub);
         udg_call_w = 1;
         }
     if ( addStop && linenum > addStop )
         {
-        printf("%4d STOP\n", addStop);
+        fprintf(out, "%4d STOP\n", addStop);
         addStop = 0;
         }
     if ( plot_flag )
         {
         if ( plot_sub && !plot_sub_w && linenum > plot_sub )
             {
-            printf("%4d DRAW 3,0: DRAW 0,3: DRAW -3,0: DRAW 0,-2: DRAW 2,0: DRAW 0,1: DRAW -1,0: RETURN: REM Plot 4x pixel\n", plot_sub);
+            fprintf(out, "%4d DRAW 3,0: DRAW 0,3: DRAW -3,0: DRAW 0,-2: DRAW 2,0: DRAW 0,1: DRAW -1,0: RETURN: REM Plot 4x pixel\n", plot_sub);
             plot_sub_w = 1;
             }
         if ( unplot_sub && !unplot_sub_w && linenum > unplot_sub )
             {
-            printf("%4d DRAW INVERSE 1;3,0: DRAW INVERSE 1;0,3: DRAW INVERSE 1;-3,0: DRAW INVERSE 1;0,-2: DRAW INVERSE 1;2,0: DRAW INVERSE 1;0,1: DRAW INVERSE 1;-1,0: RETURN: REM Unplot 4x pixel\n", unplot_sub);
+            fprintf(out, "%4d DRAW INVERSE 1;3,0: DRAW INVERSE 1;0,3: DRAW INVERSE 1;-3,0: DRAW INVERSE 1;0,-2: DRAW INVERSE 1;2,0: DRAW INVERSE 1;0,1: DRAW INVERSE 1;-1,0: RETURN: REM Unplot 4x pixel\n", unplot_sub);
             unplot_sub_w = 1;
             }
         }
     if ( udg_flag && udg_sub && ! udg_sub_w && linenum > udg_sub )
         {
-        printf("%4d RESTORE %d: LET U=USR \"a\": REM Init grey UDGs\n", udg_sub, udg_sub+3);
-        printf("%4d FOR A=0 TO 47 STEP 4: READ B,C\n", udg_sub+1);
-        printf("%4d POKE U+A,B: POKE U+A+1,C: POKE U+A+2,B: POKE U+A+3,C: NEXT A: RETURN\n", udg_sub+2);
-        printf("%4d DATA 170,85,170,85,170,85,0,0,0,0,170,85,85,170,255,255,255,255,85,170,85,170,85,170\n", udg_sub+3);
+        fprintf(out, "%4d RESTORE %d: LET U=USR \"a\": REM Init grey UDGs\n", udg_sub, udg_sub+3);
+        fprintf(out, "%4d FOR A=0 TO 47 STEP 4: READ B,C\n", udg_sub+1);
+        fprintf(out, "%4d POKE U+A,B: POKE U+A+1,C: POKE U+A+2,B: POKE U+A+3,C: NEXT A: RETURN\n", udg_sub+2);
+        fprintf(out, "%4d DATA 170,85,170,85,170,85,0,0,0,0,170,85,85,170,255,255,255,255,85,170,85,170,85,170\n", udg_sub+3);
         udg_sub_w = 1;
         }
 
@@ -362,7 +399,7 @@ void checkLine (int linelen, int linenum)
         }
 }
 
-void translateLine (int linelen, int linenum)
+void translateLine (FILE *out, int linelen, int linenum)
 {
     /* Translate line into words and characters using the charset array,
      * applying any translation transforms.
@@ -383,7 +420,7 @@ void translateLine (int linelen, int linenum)
 
     if ( keyword == K_SLOW || keyword == K_FAST ) return; /* Just remove these */
 
-    printf("%4d", linenum);
+    fprintf(out, "%4d", linenum);
 
     for (f = 0; f < linelen - 1; f++)
         {
@@ -401,19 +438,19 @@ void translateLine (int linelen, int linenum)
             switch (keyword)
                 {
                 case K_PLOT:
-                    printf(" PLOT 4*(");
+                    fprintf(out, " PLOT 4*(");
                     break;
                 case K_UNPLOT:
-                    printf(" PLOT INVERSE 1;4*(");
+                    fprintf(out, " PLOT INVERSE 1;4*(");
                     break;
                 case K_SCROLL:
-                    printf(" POKE 23692,255: PRINT AT 21,0'': REM SCROLL");
+                    fprintf(out, " POKE 23692,255: PRINT AT 21,0'': REM SCROLL");
                     break;
                 case K_POKE:
-                    printf(" REM POKE ");
+                    fprintf(out, " REM POKE ");
                     break;
                 default:
-                    printf("%s", x); /* Print translated char */
+                    fprintf(out, "%s", x); /* Print translated char */
                     break;
                 }
             }
@@ -429,49 +466,49 @@ void translateLine (int linelen, int linenum)
                 /* Non-inverse character - discontinue inverse mode if on */
                 inInverse = 0;
                 if ( style == OUT_ZMAKEBAS )
-                    printf("\\{20}\\{0}");
+                    fprintf(out, "\\{20}\\{0}");
                 else
-                    printf("]");
+                    fprintf(out, "]");
                 }
 
             if ( (plot_p || unplot_p) && !inQuotes && parens == 0 && !comma && c == K_COMMA )
                 {
                 /* The comma separating the x,y values in plot or unplot command */
                 comma = 1;
-                printf("),4*(");
+                fprintf(out, "),4*(");
                 }
             else if ( (c >= 8 && c <= 10) || ( style==OUT_ZMAKEBAS && c >= 136 && c <= 138) ) /* Grey block graphics character */
                 {
-                printf("%s", x);
+                fprintf(out, "%s", x);
                 }
             else if ( c >= (139-3*(style==OUT_READABLE)) && c <= 191) /* Inverse character */
                 {
                 if ( keyword == K_SAVE ) /* Don't switch to inverse mode */
                     {
-                    printf("%s", x);
+                    fprintf(out, "%s", x);
                     }
                 else if (inInverse)
-                    printf("%s", x); /* continue in inverse */
+                    fprintf(out, "%s", x); /* continue in inverse */
                 else
                     {
                     /* Switch to inverse mode */
                     inInverse = 1;
                     if ( style == OUT_ZMAKEBAS )
-                        printf("\\{20}\\{1}%s", x);
+                        fprintf(out, "\\{20}\\{1}%s", x);
                     else
-                        printf("[%s", x);
+                        fprintf(out, "[%s", x);
                     }
                 }
             else if ( keyword != K_REM && !inQuotes ) /* Only if used */
                 {
                 if ( c == K_USR )
                     {
-                    printf("INT INT "); /* Disable by replacing with distinct pattern when a function */
+                    fprintf(out, "INT INT "); /* Disable by replacing with distinct pattern when a function */
                     usr_p = 1;
                     }
                 else
                     {
-                    printf("%s", x); /* Print translated char */
+                    fprintf(out, "%s", x); /* Print translated char */
                     if (c == K_PEEK)        peek_p  = 1;
                     else if (c == K_CHR)    chr_p   = 1;
                     else if (c == K_CODE)   code_p  = 1;
@@ -481,9 +518,9 @@ void translateLine (int linelen, int linenum)
             else
                 {
                 if ( c == K_POWER && (keyword == K_REM || inQuotes) )
-                    printf("**"); /* Print stars instead of ^ */
+                    fprintf(out, "**"); /* Print stars instead of ^ */
                 else /* Nothing special */
-                    printf("%s", x); /* Print translated char */
+                    fprintf(out, "%s", x); /* Print translated char */
                 }
             }
         }
@@ -493,9 +530,9 @@ void translateLine (int linelen, int linenum)
         /* End of line - discontinue inverse mode if on */
         inInverse = 0;
         if ( style == OUT_ZMAKEBAS )
-            printf("\\{20}\\{0}");
+            fprintf(out, "\\{20}\\{0}");
         else
-            printf("]");
+            fprintf(out, "]");
         }
 
     /* Append any post stuff needed */
@@ -506,27 +543,27 @@ void translateLine (int linelen, int linenum)
             {
             c = linebuf[linelen-3];
             if ( c >= 128 ) /* Inverted last char of filename = autosave */
-                printf(" LINE %d", linenum+1);
+                fprintf(out, " LINE %d", linenum+1);
             }
         }
-    else if ( keyword == K_POKE )   printf(": REM POKE disabled! << WARNING **");
-    else if ( keyword == K_PLOT )   printf("): GO SUB %d: REM PLOT 4x", plot_sub);
-    else if ( keyword == K_UNPLOT ) printf("): GO SUB %d: REM UNPLOT 4x", unplot_sub);
+    else if ( keyword == K_POKE )   fprintf(out, ": REM POKE disabled! << WARNING **");
+    else if ( keyword == K_PLOT )   fprintf(out, "): GO SUB %d: REM PLOT 4x", plot_sub);
+    else if ( keyword == K_UNPLOT ) fprintf(out, "): GO SUB %d: REM UNPLOT 4x", unplot_sub);
 
-    if ( peek_p )   printf(": REM PEEK used! << WARNING **");
-    if ( usr_p )    printf(": REM USR disabled as INT INT! << WARNING **");
-    if ( chr_p )    printf(": REM CHR$ used << WARNING **");
-    if ( code_p )   printf(": REM CODE used << WARNING **");
+    if ( peek_p )   fprintf(out, ": REM PEEK used! << WARNING **");
+    if ( usr_p )    fprintf(out, ": REM USR disabled as INT INT! << WARNING **");
+    if ( chr_p )    fprintf(out, ": REM CHR$ used << WARNING **");
+    if ( code_p )   fprintf(out, ": REM CODE used << WARNING **");
     if ( inkey_p )  
         {
-        printf(": REM  INKEY$ used << WARNING ** You may need to change key comparisons to lowercase");
+        fprintf(out, ": REM  INKEY$ used << WARNING ** You may need to change key comparisons to lowercase");
         if ( keyword == K_LET && linebuf[2] == K_DOLLAR) /* Assigned to a string var */
-            printf(" with %s$.", charset[linebuf[1]]);
+            fprintf(out, " with %s$.", charset[linebuf[1]]);
         else
-            printf(".");
+            fprintf(out, ".");
         }
 
-    printf("\n");
+    fprintf(out, "\n");
 }
 
 void checkFile (FILE *in, int *linenum)
@@ -564,7 +601,7 @@ void checkFile (FILE *in, int *linenum)
 
 /* process (opened) .P file to stdout */
 
-void processFile (FILE *in)
+void processFile (FILE *in, FILE *out)
 {
     int linelen, linenum, total;
 
@@ -577,25 +614,26 @@ void processFile (FILE *in)
     getCodeLine(in, &linenum, &linelen, &total);
     while (total >= 0)
         {
-        writeSubs(linenum);
+        writeSubs(out, linenum);
         /* Write the line */
-        translateLine(linelen, linenum);
+        translateLine(out, linelen, linenum);
         prev_line = linenum;
         getCodeLine(in, &linenum, &linelen, &total);
         }
-    writeSubs(20000);
+    writeSubs(out, 20000);
 }
 
 void printUsage ()
 {
-    printf("P2spectrum %s by Ryan Gray\n", VERSION);
+    printf("p2speccy %s by Ryan Gray\n", VERSION);
     printf("Translates a ZX81 .P file program to Spectrum BASIC text.\n");
-    printf("Usage:  p2spectrum [options] infile.p > outfile.txt\n");
+    printf("Usage:  p2speccy [options] infile.p > outfile\n");
+    printf("Usage:  p2speccy [options] -o  outfile infile.p\n");
     printf("Options are:\n");
     printf("  -z  Output Zmakebas compatible markup\n");
     printf("  -r  Output a more readable markup (default).\n");
     printf("      Inverse characters in square brackets, most block graphics.\n");
-    //printf("  -o outfile  Give the name of an output file rather than using stdout.\n");
+    printf("  -o outfile  Give the name of an output file rather than using stdout.\n");
     printf("The Zmakebas output will use \\{xxx} codes in REMs and quotes to preserve\n");
     printf("the non-printable and token character codes, whereas in readable mode, these\n");
     printf("will give a hash (#) character. Zmakebas mode also inserts inverse and true\n");
@@ -605,11 +643,9 @@ void printUsage ()
 
 void parseOptions (int argc, char *argv[])
 {
-    int opt = 0;
-
-    while ((opt = getopt(argc, argv, ":zro:")) != -1)
+    while ((argc > 1) && (argv[1][0] == '-'))
         {
-        switch (opt)
+        switch (argv[1][1])
             {
             case 'z':
                 style = OUT_ZMAKEBAS;
@@ -620,31 +656,30 @@ void parseOptions (int argc, char *argv[])
                 charset = charset_read;
                 break;
             case 'o':
-                outfile = argv[optind];
+                outfile = argv[2];
+                ++argv;
+                --argc;
                 break;
-            case ':':
-                printf("Option %c needs a filename\n", opt);
-                printUsage();
-                exit(EXIT_FAILURE);
             default:
-                printf("unknown option: %c\n", optopt);
+                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                 printUsage();
                 exit(EXIT_FAILURE);
             }
+	    ++argv;
+	    --argc;
         }
     if (argc <= 1)
         {
         printUsage();
         exit(EXIT_FAILURE);
         }
-    if (optind < argc)
-        infile = argv[optind];
+    infile = argv[argc-1];
 }
 
 
 int main (int argc, char *argv[])
 {
-    FILE *in;
+    FILE *in, *out;
     int linenum;
 
     if (argc < 2)
@@ -652,10 +687,30 @@ int main (int argc, char *argv[])
     else
         parseOptions(argc, argv);
 
-    if ( (in = fopen(infile, "rb")) == NULL )
+    if ( strcmp(infile,".") == 0 )
+
+        in = stdin;
+
+    else
         {
-        fprintf(stderr, "Error: couldn't open file '%s'\n", infile);
-        exit(1);
+        in = fopen(infile, "rb");
+        if ( in == NULL )
+            {
+            fprintf(stderr, "Error: couldn't open file '%s'\n", infile);
+            exit(1);
+            }
+        }
+
+    if ( outfile[0] == '\0' )
+        out = stdout;
+    else
+        {
+        out = fopen(outfile, "wt");
+        if ( out == NULL )
+            {
+            fprintf(stderr, "Error: couldn't write output file '%s'\n", outfile);
+            exit(1);
+            }
         }
 
     if ( style == OUT_READABLE)
@@ -664,8 +719,9 @@ int main (int argc, char *argv[])
         warn = warn_ZMB;
 
     checkFile(in, &linenum); /* 1st pass to check */
-    processFile(in);         /* 2nd pass to process */
+    processFile(in, out);         /* 2nd pass to process */
     fclose(in);
+    fclose(out);
 
     exit(0);
 }

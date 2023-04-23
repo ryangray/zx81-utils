@@ -125,13 +125,15 @@ machine.
 
 ## Usage
 
-    p2speccy -r filename.p > filename.txt
-    p2speccy -z filename.p > filename.txt
+    p2speccy -r infile.p > outfile
+    p2speccy -z infile.p > outfile
+    p2speccy -r -o outfile infile.p
 
 The `-r` option give a more readable output form with block graphics characters 
 (for most), and brackets around inverse characters. The `-z` output option (the 
 default) is a [zmakebas][] compatible output so you can use that to make a 
-`.tap` file of the result.
+`.tap` file of the result. The `-o` option can be used instead of sandard output 
+redirection to name the output file. The name is given after `-o`.
 
 The differences in ZX81 and Spectrum BASIC are handled by:
 

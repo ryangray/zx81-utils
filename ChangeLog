@@ -1,4 +1,11 @@
 2023-04-22 ryangray
+    * Adjustments to make p2speccy compile for DOS:
+        - Make a conditional compile set of characters for code page 437 or Unicode
+        - Remove using unistd.h and parse args without getopt
+    * Add -o option to give output filename
+    * Version 1.0.1
+
+2023-04-22 ryangray
     * Changing the name of p2spectrum to p2speccy so that it is 8.3 DOS friendly
     * Renaming hex2rem_test.txt and hex2rem_test.bas to hex2rem.txt and 
       hex2rem.bas for the same reason.
