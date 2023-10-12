@@ -1,3 +1,12 @@
+2023-10-12 ryangray
+    * Add hex2tap to convert hex or binary files to a .tap file with a CODE
+      block containing the bytes. Yes, this is actually a Spectrum utility.
+
+2023-05-06 ryangray
+    * Add .tap file support to rem2bin. This makes it a Spectrum crossover 
+      utility. It's a small add to this, and I don't have a Spectrum utilities 
+      project to put it in yet.
+
 2023-04-23 ryangray
     * New utility, rem2bin, extracts line 1 REM machine code to a file
 

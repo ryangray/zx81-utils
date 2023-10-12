@@ -11,7 +11,7 @@ else
 	CFLAGS = -Wall -I$(IDIR)
 endif
 
-all: p2txt-all p2speccy-all hex2rem-all rem2bin-all
+all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all
 
 .PHONY: all
 
@@ -82,6 +82,11 @@ rem2bin.txt: rem2bin TEST1.p
 rem2bin.bin: rem2bin TEST1.p
 	./rem2bin -b -o rem2bin.bin TEST1.p
 
+hex2tap-all: hex2tap
+
+hex2tap: hex2tap.o
+	$(CC) -o $@ $^ $(CFLAGS)
+
 .PHONY: clean
 
 clean:
@@ -90,3 +95,4 @@ clean:
 	rm p2speccy
 	rm hex2rem
 	rm rem2bin
+	rm hex2tap

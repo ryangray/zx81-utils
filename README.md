@@ -272,12 +272,20 @@ zmakebas literal code escape notation using a hex value:
 This is the opposite of `hex2rem` but with the default of binary output. It 
 extracts the first line REM statement's content as binary code. You can opt for
 hexadecimal output instead. The REM statement number doesn't have to be `1`, but
-it does need to be the first line of the program.
+it does need to be the first line of the program. This supports both .p  and 
+.tap files, so it works for both ZX81/TS1000 and ZX Spectrim/TS2068.
+
+You could use this to extract the machine code in a BASIC rem statement into a
+binary file, then use a Z80 disassembler on the code. The utility `tzxcat` from
+the [tzxtools][] can disassemble the machine code in a Spectrum CODE block of a
+tape file, but not from the rem line. I think you can pull the tape file into a
+disassembler and give it the correct offset to start at (116 for .p, 24 for 
+.tap).
 
 ## Usage
 
-    rem2bin [-b|-h] input_file > output_file
-    rem2bin [-b|-h] -o output_file input_file
+    rem2bin [-b|-h] [-p|-t] input_file > output_file
+    rem2bin [-b|-h] [-p|-t] -o output_file input_file
 
 Options:
 
@@ -285,7 +293,13 @@ Options:
 
 * `-h` : Output is hex values as text, written 16 to a line.
 
-Note that `input_file` can be "." to use standard input.
+* `-p` : Input file is .p format
+
+* `-t` : Input file is .tap format (only reads the first program in the file)
+
+Note that `input_file` can be "-" to use standard input. The `-p` and `-t` 
+options aren't necessary if the type can be inferred fron the input file name
+extension.
 
 For example, if the program in a .p file has machine code in the line 1 REM 
 statement, you could extract that to a file and disassemble it:
@@ -297,3 +311,31 @@ TODO: Keep going as long as the first lines are REMs since some programs split
 the MC up between a few REMs. However, some might have comment REMs after the
 MC REMs though.
 
+# hex2tap
+
+Like `hex2rem`, this takes a hex or binary file as input, but it outputs a 
+ZX Spectrum/TS2068 .tap file with a CODE block containing the bytes. Yes, this
+is actualy a Spectrum utility.
+
+The bytes are not translated, so this could be Z80 machine code suitable for 
+running on the Spectrum or similar model, but it could also just be bytes for
+some useer-defined graphics characters.
+
+You can specify the code block starting address as well as the tape block name.
+The default output is to standard output. 
+
+## Usage
+
+    hex2tap [-h|-b] [-n speccy_filename] [-a address] [-o output_file] input_file
+    
+* `-h` : Input are hex values in a text file. These can be on multiple lines,
+    and whitespace is ignored between hex digit pairs. This is the default.
+
+* `-b` : Input is a binary file.
+
+* `-n speccy_filename` : The filename in the .tap file as the Spectrum sees it.
+
+* `-a address` : The address the code block is tagged with to load into by default.
+
+Note that `input_file` can be "-" to use standard input. `output_file` should
+custromarily have a file extension of ".tap", which is not automatically added.
