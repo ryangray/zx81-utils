@@ -82,10 +82,16 @@ rem2bin.txt: rem2bin TEST1.p
 rem2bin.bin: rem2bin TEST1.p
 	./rem2bin -b -o rem2bin.bin TEST1.p
 
-hex2tap-all: hex2tap
+hex2tap-all: hex2tap pictest.tap
 
 hex2tap: hex2tap.o
 	$(CC) -o $@ $^ $(CFLAGS)
+
+pic.tap: hex2tap pic.scr
+	./hex2tap -b -a SCR -n pic -o pic.tap pic.scr
+
+pictest.tap: pic.tap loadpic.tap
+	cat loadpic.tap pic.tap > pictest.tap
 
 .PHONY: clean
 

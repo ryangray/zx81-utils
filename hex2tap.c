@@ -65,7 +65,8 @@ void usageHelp()
     printf("    -b           Input is a binary file (default)\n");
     printf("    -h           Input is text file of hex codes\n");
     printf("    -a address   Start address of the code (use 0x prefix for hex)\n");
-    printf("                 Use UDG as an alias for 65368.\n");
+    printf("                 Use '-a UDG' as an alias for '-a 65368' (USR \"a\").\n");
+    printf("                 Use '-a SCR' as an alias for '-a 16384' (SCREEN$).\n");
     printf("    -n name      Set Spectrum filename (default is blank or -o name)\n");
     printf("    -o filename  Specify output file name (default is stdout)\n");
     printf("\nDefault input is stdin or explicitly with input filename of '-'\n");
@@ -92,8 +93,10 @@ void parseOptions(int argc, char *argv[])
                 break;
             case 'a':
                 aptr = argv[2] + strlen(argv[2]) - 1;
-                if (strcmp(argv[2],"UDG") == 0)
+                if (strcasecmp(argv[2],"UDG") == 0)
                     address = 65368;
+                else if (strcasecmp(argv[2],"SCR") == 0)
+                    address = 16384;
                 else
                     address = (unsigned int)strtoul(argv[2], &aptr, 0);
                 ++argv;
@@ -189,7 +192,7 @@ void readInputHex ()
 int main (int argc, char *argv[])
 {
     int f, chk;
-    unsigned char headerbuf[17];
+    char headerbuf[17];
 
     parseOptions(argc, argv);
 

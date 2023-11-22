@@ -335,7 +335,42 @@ The default output is to standard output.
 
 * `-n speccy_filename` : The filename in the .tap file as the Spectrum sees it.
 
-* `-a address` : The address the code block is tagged with to load into by default.
+* `-a address` : The address the code block is tagged with to load into by
+  default. The length is set by the input length.
+
+    - Use `-a UDG` as an alias for `-a 65368` (USR "a")
+    - Use `-a SCR` as an alias for `-a 16384` (SCREEN$)
 
 Note that `input_file` can be "-" to use standard input. `output_file` should
-custromarily have a file extension of ".tap", which is not automatically added.
+customarily have a file extension of ".tap", which is not automatically added.
+
+## Test case
+
+The test for `hex2tap` is converting `pic.scr` (a raw Spectrum screen memory
+file) to a code block in a .tap file, `pic.tap`. This is done with:
+
+    hex2tap -b -a SCR -n pic -o pic.tap pic.scr
+
+The `Makefile` has a target `pic.tap` to do this. It also has a target of 
+`pictest.tap` which will make `pictest.tap`, composed of `loadpic.tap` and 
+`pic.tap` using:
+
+    cat loadpic.tap pic.tap > pictest.tap
+
+`loadpic.tap` contains just a one line BASIC program that auto starts to do a
+`LOAD "" SCREEN$` command. This is put with `pic.tap` that contains the SCREEN$
+code block together in `pictest.tap`. You can load this into an emulator to
+easily load the image. You could also convert the file to a .wav file to play 
+into a real machine.
+
+For code testing, `pic.tap` will be re-made if `hex2tap` changes and `pic.tap`
+is made, which is also done if `hex2tap-all` is made. Then check if it differs 
+from the repository version.
+
+You could make a script `scr2tap` to specifically convert .SCR files to .TAP:
+```bash
+#!/bin/bash
+hex2tap -b -a SCR $*
+```
+
+Then you can just use: `scr2tap -n pic -o pic.tap pic.scr`
