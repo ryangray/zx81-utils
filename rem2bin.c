@@ -10,6 +10,12 @@
 #define VERSION "1.0.1"
 #define REM_code 234
 
+#ifdef __MSDOS__
+#define STRCMPI strcmpi
+#else
+#define STRCMPI strcasecmp
+#endif
+
 char *infile = "", *outfile = "";
 enum output_style {OUT_HEX, OUT_BINARY};
 enum output_style out_fmt = OUT_BINARY;
@@ -82,9 +88,9 @@ void parse_options(int argc, char *argv[])
         s = strrchr(infile, '.');
         if (s != NULL)
             {
-            if (strcasecmp(s,".p") == 0)
+            if (STRCMPI(s,".p") == 0)
                 in_fmt = IN_P;
-            else if (strcasecmp(s,".tap") == 0)
+            else if (STRCMPI(s,".tap") == 0)
                 in_fmt = IN_TAP;
             }
         if (in_fmt == IN_GUESS)

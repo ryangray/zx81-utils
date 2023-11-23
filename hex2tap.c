@@ -43,13 +43,21 @@
 
 #define VERSION "1.0.1"
 
+#ifdef __MSDOS__
+#define STRCMPI strcmpi
+#define BUFSIZE 8192
+#else
+#define STRCMPI strcasecmp
+#define BUFSIZE 49152
+#endif
+#define LINESIZE 8192
+
 char *infile  = "";
 char *outfile = "";
 char *speccy_filename = "";
 unsigned int length = 0;
 unsigned int address = 0;
-#define BUFSIZE 49152
-unsigned char filebuf[BUFSIZE];
+char filebuf[BUFSIZE];
 FILE *in, *out;
 enum input_style {IN_HEX, IN_BINARY};
 enum input_style in_fmt = IN_BINARY;
@@ -93,9 +101,9 @@ void parseOptions(int argc, char *argv[])
                 break;
             case 'a':
                 aptr = argv[2] + strlen(argv[2]) - 1;
-                if (strcasecmp(argv[2],"UDG") == 0)
+                if (STRCMPI(argv[2],"UDG") == 0)
                     address = 65368;
-                else if (strcasecmp(argv[2],"SCR") == 0)
+                else if (STRCMPI(argv[2],"SCR") == 0)
                     address = 16384;
                 else
                     address = (unsigned int)strtoul(argv[2], &aptr, 0);
@@ -150,10 +158,10 @@ void readInputHex ()
     /* Read input as a text file of hex bytes, ignoring spaces and tabs between */
 
     unsigned int l, m;
-    char buff[BUFSIZE*2];
+    char buff[LINESIZE];
     char *ptr, h1, h2;
     
-    while ( fgets(buff, BUFSIZE*2, in) != NULL )
+    while ( fgets(buff, LINESIZE, in) != NULL )
         {
         l = strlen(buff);
         for (ptr = buff; ptr < buff+l-1; ptr++)

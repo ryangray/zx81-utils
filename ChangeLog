@@ -3,6 +3,7 @@
     * Also document the existing 'UDG' address alias, equivalnet to USR "a". 
     * Change header buffer from unsigned char to char to remove compile warning.
     * Added a test case for hex2tap of converting an .scr file to .tap.
+    * Use smaller line reading buffers so it works under DOS
 
 2023-10-12 ryangray
     * Add hex2tap to convert hex or binary files to a .tap file with a CODE
