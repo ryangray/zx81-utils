@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 char *infile  = "";
 char *outfile = "";
