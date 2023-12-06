@@ -45,11 +45,10 @@
 
 #ifdef __MSDOS__
 #define STRCMPI strcmpi
-#define BUFSIZE 8192
 #else
 #define STRCMPI strcasecmp
-#define BUFSIZE 49152
 #endif
+#define BUFSIZE 49152
 #define LINESIZE 8192
 
 char *infile  = "";
