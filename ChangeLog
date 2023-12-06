@@ -1,3 +1,6 @@
+2023-12-05 ryangray
+    * Add 'tapnoauto' utility to disable auto run on all programs in a tap file
+  
 2023-11-22 ryangray
     * Add 'SCR' as an address alias to 16384 for SCREEN$ data (like .scr files)
     * Also document the existing 'UDG' address alias, equivalnet to USR "a". 

@@ -11,7 +11,7 @@ else
 	CFLAGS = -Wall -I$(IDIR)
 endif
 
-all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all
+all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all tapnoauto-all
 
 .PHONY: all
 
@@ -92,6 +92,11 @@ pic.tap: hex2tap pic.scr
 
 pictest.tap: pic.tap loadpic.tap
 	cat loadpic.tap pic.tap > pictest.tap
+
+tapnoauto-all: tapnoauto
+
+tapnoauto: tapnoauto.o
+	$(CC) -o $@ $^ $(CFLAGS)
 
 .PHONY: clean
 
