@@ -1,3 +1,6 @@
+2023-12-07 ryangray
+    * Rename tapnoauto to tap0auto so DOS name is 8 chars
+  
 2023-12-05 ryangray
     * Add 'tapnoauto' utility to disable auto run on all programs in a tap file
   

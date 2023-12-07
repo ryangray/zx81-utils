@@ -1,4 +1,4 @@
-/* tapnoauto
+/* tap0auto
  * By Ryan Gray
  * December 2023
  * 
@@ -28,9 +28,9 @@ FILE *in, *out;
 
 void usageHelp()
 {
-    printf("tapnoauto v%s - by Ryan Gray\n\n", VERSION);
+    printf("tap0auto v%s - by Ryan Gray\n\n", VERSION);
 
-    printf("Usage: tapnoauto input_file output_file\n");
+    printf("Usage: tap0auto input_file output_file\n");
 }
 
 

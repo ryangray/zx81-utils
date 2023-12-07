@@ -11,7 +11,7 @@ options. Other utilities have been added.
 * [`rem2bin`](#rem2bin) - Extract machine code in line 1 REM to a file
 * [`hex2tap`](#hex2tap) - Convert hex or binary file to a Spectrum CODE block in
   a tap file.
-* [`tapnoauto']
+* [`tap0auto'](#tap0auto) - Disable BASIC program auto run in a tap file
 
 [ralphson]: https://github.com/MikeRalphson/zx81-utils
 [zx81-utils]: https://github.com/ryangray/zx81-utils
@@ -379,7 +379,7 @@ hex2tap -b -a SCR $*
 Then you can just use: `scr2tap -n pic -o pic.tap pic.scr`
 
 
-# tapnoauto
+# tap0auto
 
 Yet another ZX Spectrum/TS2068 utility. This will take in a tap file and output
 the same contents to the output but with the auto run feature turned off for all
@@ -387,7 +387,7 @@ the BASIC programs in the tap file.
 
 ## Usage
 
-    tapnoauto input_file output_file
+    tap0auto input_file output_file
 
 This only works on .tap files, so if you have a .tzx file, you need to convert
 it to a .tap file. `tzxtap` from the [tzxtools][] can be used for this.
@@ -396,5 +396,5 @@ it to a .tap file. `tzxtap` from the [tzxtools][] can be used for this.
 standard output, respectively. So, you could pipe the output of `tzxtap` to
 process a .tzx file with:
 
-    tzxtap foo.tzx | tapnoauto - foo.tap
+    tzxtap foo.tzx | tap0auto - foo.tap
 
