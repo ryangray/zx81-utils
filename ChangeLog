@@ -1,3 +1,8 @@
+2023-12-10 ryangray
+    * Specify the line number with: -l nnnn
+    * Fix using '-' for standard input and output
+    * Output name can be optionally given 
+
 2023-12-07 ryangray
     * Rename tapnoauto to tap0auto so DOS name is 8 chars
   
