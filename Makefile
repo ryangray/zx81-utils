@@ -102,8 +102,17 @@ tap0auto: tap0auto.o
 
 clean:
 	rm -f core
+	rm *.o
 	rm p2txt
 	rm p2speccy
 	rm hex2rem
 	rm rem2bin
 	rm hex2tap
+
+install-home:
+	cp p2txt ~/bin
+	cp p2speccy ~/bin
+	cp hex2rem ~/bin
+	cp rem2bin ~/bin
+	cp hex2tap ~/bin
+

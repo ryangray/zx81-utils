@@ -11,7 +11,7 @@ options. Other utilities have been added.
 * [`rem2bin`](#rem2bin) - Extract machine code in line 1 REM to a file
 * [`hex2tap`](#hex2tap) - Convert hex or binary file to a Spectrum CODE block in
   a tap file.
-* [`tap0auto'](#tap0auto) - Disable BASIC program auto run in a tap file
+* [`tap0auto``](#tap0auto) - Disable BASIC program auto run in a tap file
 
 [ralphson]: https://github.com/MikeRalphson/zx81-utils
 [zx81-utils]: https://github.com/ryangray/zx81-utils
