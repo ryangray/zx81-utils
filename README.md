@@ -398,3 +398,52 @@ process a .tzx file with:
 
     tzxtap foo.tzx | tap0auto - foo.tap
 
+
+# p2ts1510
+
+This will comvert a ZX81/TS1000/TS1500 program contained in a .p file format to
+a ROM file intended to be used with the [Timex Sinclair 1510 Command Cartridge
+Player][TS1510] or [equivalent][TS1510clone].
+
+[TS1510]: https://timexsinclair.com/product/ts-1510-cartridge-player/
+
+[TS1510clone]: https://www.sinclairzxworld.com/viewtopic.php?f=7&t=192&sid=cff3eefa733588c77ae157fa5bcd25e8
+
+In order to be general, this creates a more extensive loader program than we see
+in the existing 4 cartridge ROMs. These can be burned to EPROMs tu be used in a
+compatible device or used in the [EightyOne][] emulator which allows you load 
+custom 1510 ROMs.
+
+[EightyOne]: https://sourceforge.net/projects/eightyone-sinclair-emulator/
+
+## Usage
+
+    p2ts1510 [options] [input_file]
+
+The input file name can be given as `-` to use standard input but is not
+necessary. If the input is stdin, then the output will default to stdout
+unless the `-o` option is given.
+
+Options:
+
+* `-o output_file` - Name the output file. The default uses the basename of 
+  the input file. You can use `-` to explicitly send to standard output. If
+  the output is stdout, then it is the equivalent of using the `-1` option.
+
+* `-v` - Include the variables from the P file.
+
+* `-a line_number` - Force the auto run line number. The default is to use
+  whatever the P file has, which could be no auto run. You can use `-1` to force
+  no auto run.
+
+* `-s` - Write a "short" ROM file that is not padded out to a length multiple 
+  of 8K.
+
+* `-1` - For large programs that require more than one 8K ROM, two 8K ROMs are
+  made. By default, two separate files are written with "_A" and "_B" added to
+  the output name. This option puts both 8K blocks into one file. If `-s` is
+  also used, then the first block is a full 8K, and the second block is short.
+
+The cartridge ROM will autorun on startup on a TS1500, but on a ZX81 or 
+TS1000, you will have to give the command `RAND USR 8192` to start the ROM
+loader.

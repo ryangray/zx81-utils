@@ -1,4 +1,9 @@
+2024-03-05 ryangray
+    * New utility, p2ts1510, to convert P file programs to a TS1510 cartridge 
+      ROM image.
+
 2023-12-10 ryangray
+    * hex2rem updates
     * Specify the line number with: -l nnnn
     * Fix using '-' for standard input and output
     * Output name can be optionally given 

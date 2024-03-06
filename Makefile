@@ -11,7 +11,7 @@ else
 	CFLAGS = -Wall -I$(IDIR)
 endif
 
-all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all tap0auto-all
+all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all tap0auto-all p2ts1510-all
 
 .PHONY: all
 
@@ -98,6 +98,11 @@ tap0auto-all: tap0auto
 tap0auto: tap0auto.o
 	$(CC) -o $@ $^ $(CFLAGS)
 
+p2ts1510-all: p2ts1510
+
+p2ts1510: p2ts1510.o
+
+
 .PHONY: clean
 
 clean:
@@ -108,6 +113,7 @@ clean:
 	rm hex2rem
 	rm rem2bin
 	rm hex2tap
+	rm p2ts1510
 
 install-home:
 	cp p2txt ~/bin
@@ -115,4 +121,4 @@ install-home:
 	cp hex2rem ~/bin
 	cp rem2bin ~/bin
 	cp hex2tap ~/bin
-
+	cp p2ts1510 ~/bin
