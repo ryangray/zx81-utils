@@ -426,6 +426,8 @@ unless the `-o` option is given.
 
 Options:
 
+* `-h` - Show the usage help.
+
 * `-o output_file` - Name the output file. The default uses the basename of 
   the input file. You can use `-` to explicitly send to standard output. If
   the output is stdout, then it is the equivalent of using the `-1` option.
@@ -443,6 +445,13 @@ Options:
   made. By default, two separate files are written with "_A" and "_B" added to
   the output name. This option puts both 8K blocks into one file. If `-s` is
   also used, then the first block is a full 8K, and the second block is short.
+
+* `-i` - Print the P file and ROM block info without writing any ROMs. This can
+  be useful to see if there is any variable data in the P file and what the auto
+  start line number is. If there are variables, you could use `-v` to include
+  them, or you could opt to not to if you are able to find that the line(s)
+  after the auto start include a `RUN` which clears the variables anyway. This
+  will also show you the output file name(s) that would be used.
 
 The cartridge ROM will autorun on startup on a TS1500, but on a ZX81 or 
 TS1000, you will have to give the command `RAND USR 8192` to start the ROM

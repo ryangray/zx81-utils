@@ -59,6 +59,7 @@ int shortRomFile = 0;
 int oneRom = 0;
 int thisRomSize = 0;
 int prevRomSize = 0; /* Length of ROM written so far */
+int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
 
 /* We will be writing 1 or two ROM images, and later perhaps a cart image file
 */
@@ -228,6 +229,7 @@ void printUsage ()
     printf("  -a line     Will set the autorun line number. Negative to disable autorun.\n");
     printf("  -s          Output short ROM files that are not padded to 8K boundaries.\n");
     printf("  -1          Output only a single ROM file.\n");
+    printf("  -i          Print the P file and block info but don't output the ROMs.\n");
     printf("  -h          Print this help.\n");
     printf("The default output file name is taken from the input file name.\n");
     printf("The input can be standard input or you can give '-' as the file name.\n");
@@ -269,6 +271,9 @@ void parseOptions (int argc, char *argv[])
             case 'h':
                 printUsage();
                 exit(EXIT_SUCCESS);
+            case 'i':
+                infoOnly = 1;
+                break;
             default:
                 fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                 printUsage();
@@ -301,14 +306,20 @@ void writeROM(FILE *out, int last)
     int f;
     if (shortRomFile && last)
         {
-        for (f = 0; f < thisRomSize; f++)
-            fputc(rom[f], out);
+        if (!infoOnly)
+            {
+            for (f = 0; f < thisRomSize; f++)
+                fputc(rom[f], out);
+            }
         fprintf(stderr, "  %d bytes\n", prevRomSize + thisRomSize);
         }
     else
         {
-        for (f = 0; f < romSize; f++)
-            fputc(rom[f], out);
+        if (!infoOnly)
+            {
+            for (f = 0; f < romSize; f++)
+                fputc(rom[f], out);
+            }
         if (last)
             fprintf(stderr, "  %d bytes\n", prevRomSize + romSize);
         }
@@ -585,18 +596,6 @@ int main (int argc, char *argv[])
         if (vars2len)
             fprintf(stderr, "%5d: Variables segment 2 in ROM, %d bytes\n", vars2addr, vars2len);
         }
-    if (!out)
-        {
-        strcpy(outname, outroot);
-        strcat(outname, outext);
-        out = fopen(outname, "w");
-        if ( out == NULL )
-            {
-            fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
-            cleanup();
-            exit(EXIT_FAILURE);
-            }
-        }
     /* Read program into buffer */
     for (f = 0; f < prog_size; f++)
         buff[f] = fgetc(in);
@@ -651,31 +650,17 @@ int main (int argc, char *argv[])
     rom[AUTOAD+1] = b2;
     fprintf(stderr, "Autorun addr = %d\n", autoaddr);
 
-    fprintf(stderr, "Writing: %s\n", outname);
-
-    /* Copy program block 1 to rom */
-    memcpy(rom + dataOffset, buff, prog1len);
-    thisRomSize = dataOffset + prog1len;
-
-    if (prog2len > 0)
+    if (!out)
         {
-        // Prog is split
-        // done with rom A
-        writeROM(out, !oneRom);
-        if (oneRom)
+        strcpy(outname, outroot);
+        strcat(outname, outext);
+        if (infoOnly)
             {
-            prevRomSize += romSize;
+            fprintf(stderr, "ROM: %s\n", outname);
             }
         else
             {
-            prevRomSize = 0;
-            fclose(out);
-            // Open ROM B
-            c = strlen(outroot);
-            outroot[c-1]++; // A->B
-            strcpy(outname, outroot);
-            strcat(outname, outext);
-            out = fopen(outname,"w");
+            out = fopen(outname, "w");
             if ( out == NULL )
                 {
                 fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
@@ -684,7 +669,46 @@ int main (int argc, char *argv[])
                 }
             fprintf(stderr, "Writing: %s\n", outname);
             }
-        // Write prog 2 block to rom
+        }
+
+    /* Copy program block 1 to rom */
+    memcpy(rom + dataOffset, buff, prog1len);
+    thisRomSize = dataOffset + prog1len;
+
+    if (prog2len > 0)
+        {
+        /* Prog is split, done with first 8K ROM */
+        writeROM(out, !oneRom);
+        if (oneRom)
+            {
+            prevRomSize += romSize;
+            }
+        else
+            {
+            /* ROM B */
+            prevRomSize = 0;
+            c = strlen(outroot);
+            outroot[c-1]++; // A->B
+            strcpy(outname, outroot);
+            strcat(outname, outext);
+            if (infoOnly)
+                {
+                fprintf(stderr, "ROM: %s\n", outname);
+                }
+            else
+                {
+                fclose(out);
+                out = fopen(outname,"w");
+                if ( out == NULL )
+                    {
+                    fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
+                    cleanup();
+                    exit(EXIT_FAILURE);
+                    }
+                fprintf(stderr, "Writing: %s\n", outname);
+                }
+            }
+        /* Write prog 2 block to rom */
         memset(rom, 0xFF, romSize);
         memcpy(rom, buff + prog1len, prog2len);
         thisRomSize = prog2len;
@@ -703,8 +727,7 @@ int main (int argc, char *argv[])
         thisRomSize = vars1offs + vars1len;
         if (vars2len > 0)
             {
-            // Vars is split
-            // Done with ROM A
+            /* Vars is split, done with first 8K ROM */
             writeROM(out, !oneRom);
             if (oneRom)
                 {
@@ -712,31 +735,39 @@ int main (int argc, char *argv[])
                 }
             else
                 {
+                /* ROM B */
                 prevRomSize = 0;
-                fclose(out);
-                // Open ROM B
                 c = strlen(outroot);
                 outroot[c-1]++; // A->B
                 strcpy(outname, outroot);
                 strcat(outname, outext);
-                out = fopen(outname,"w");
-                if ( out == NULL )
+                if (infoOnly)
                     {
-                    fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
-                    cleanup();
-                    exit(EXIT_FAILURE);
+                    fprintf(stderr, "ROM: %s\n", outname);
                     }
-                fprintf(stderr, "Writing: %s\n", outname);
+                else
+                    {
+                    fclose(out);
+                    out = fopen(outname,"w");
+                    if ( out == NULL )
+                        {
+                        fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
+                        cleanup();
+                        exit(EXIT_FAILURE);
+                        }
+                    fprintf(stderr, "Writing: %s\n", outname);
+                    }
                 }
-            // Write vars 2 block to rom
+            /* Write vars 2 block to rom */
             memset(rom, 0xFF, romSize);
             memcpy(rom, buff + vars1len, vars2len);
             thisRomSize = vars2len;
             }
         }
-    // Done with ROM
+    /* All done */
     writeROM(out, 1);
-    fclose(out);
+    if (!infoOnly)
+        fclose(out);
     fclose(in);
     cleanup();
     exit(EXIT_SUCCESS);

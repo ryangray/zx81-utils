@@ -1,3 +1,6 @@
+2024-03-07 ryangray
+    * Add option to only print the P file and ROM block info and not write any ROMs.
+
 2024-03-05 ryangray
     * New utility, p2ts1510, to convert P file programs to a TS1510 cartridge 
       ROM image.
