@@ -14,7 +14,7 @@
 #define NUM_code 126
 #define REM_code 234
 #define NAK2 "!"
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
 
 unsigned char linebuf[32768]; /* BIG buffer for those lovely m/c REMs */
 char *infile;
@@ -303,7 +303,7 @@ while (total >= 0)
     }
 }
 
-void print_usage ()
+void printUsage ()
   {
   printf("p2txt %s by Ryan Gray, from original by Russell Marks \n", VERSION);
   printf("    for improbabledesigns.\n");
@@ -315,11 +315,11 @@ void print_usage ()
   printf("      Inverse characters in square brackets, most block graphics.\n");
   printf("  -1  Output Zmakebas markup but only use codes in a first line that is a REM.\n");
   printf("  -2  Output ZXText2P compatible markup\n");
+  printf("  -?  Print this help.\n");
   printf("The Zmakebas output will use \\{xxx} codes in REMs and quotes to preserve\n");
   printf("the non-printable and token character codes, whereas in readable mode, these\n");
   printf("will give a hash (#) character. Zmakebas mode also inserts inverse and true\n");
   printf("video codes where inverse characters appear in REMs and strings.\n");
-  exit(1);
   }
 
 void parse_options(int argc, char *argv[])
@@ -348,8 +348,12 @@ void parse_options(int argc, char *argv[])
                 charset = charset_zxtext2p;
                 onlyFirstLineREM = 0;
                 break;
+            case '?':
+                printUsage();
+                exit(EXIT_SUCCESS);
             default:
-                print_usage();
+                printUsage();
+                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                 exit(EXIT_FAILURE);
             }
 	    ++argv;
@@ -357,7 +361,7 @@ void parse_options(int argc, char *argv[])
         }
     if (argc <= 1)
         {
-        print_usage();
+        printUsage();
         exit(EXIT_FAILURE);
         }
     infile = argv[argc-1];

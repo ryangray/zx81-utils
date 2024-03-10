@@ -24,10 +24,12 @@ all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all tap0auto-all p2t
 %.p: %.txt
 	zmakebas -p -n $* -o $@ $<
 
+%.bin: %.a80
+	z80asm --list=$*.txt -o $@ $<
+
 p2txt-all: p2txt p2t-test1
 
 p2txt: p2txt.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 p2t-test1: TEST1-p2txt-r.txt TEST1-p2txt-1.txt TEST1-p2txt-z.txt TEST1-p2txt-2.txt
 
@@ -46,7 +48,6 @@ TEST1-p2txt-2.txt: p2txt TEST1.p
 p2speccy-all: p2speccy p2s-test1
 
 p2speccy: p2speccy.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 p2s-test1: TEST1-p2speccy-r.txt TEST1-p2speccy-z.txt TEST1-p2speccy.tap
 
@@ -62,7 +63,6 @@ TEST1-p2speccy.tap: TEST1-p2speccy-z.txt
 hex2rem-all: hex2rem hex2rem-test1
 
 hex2rem: hex2rem.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 hex2rem-test1: hex2rem.bas hex2rem.p
 
@@ -72,7 +72,6 @@ hex2rem.bas: hex2rem hex2rem.txt
 rem2bin-all: rem2bin rem2bin-test
 
 rem2bin: rem2bin.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 rem2bin-test: rem2bin.bin rem2bin.txt
 
@@ -85,7 +84,6 @@ rem2bin.bin: rem2bin TEST1.p
 hex2tap-all: hex2tap pictest.tap
 
 hex2tap: hex2tap.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 pic.tap: hex2tap pic.scr
 	./hex2tap -b -a SCR -n pic -o pic.tap pic.scr
@@ -96,12 +94,12 @@ pictest.tap: pic.tap loadpic.tap
 tap0auto-all: tap0auto
 
 tap0auto: tap0auto.o
-	$(CC) -o $@ $^ $(CFLAGS)
 
 p2ts1510-all: p2ts1510
 
 p2ts1510: p2ts1510.o
 
+p2ts1510-loader: p2ts1510-loader.bin
 
 .PHONY: clean
 

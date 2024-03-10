@@ -1,0 +1,166 @@
+; TS1015 loader program
+; Unified from original codes in existing carts to be generic, allowing for a
+; program, and optionally the variables, to be stored in potentially in two 
+; ROMs, where either the program is split into two parts, or the variables are
+; split into two parts. The part info is stored at the end of the first ROM as
+; before, but with added bytes for a variables 1 and 2 parts.
+; The intent is to allow for any program to be made into a cartridge from its P
+; file. The loader is $B5 bytes long, so still ends before $100, but is longer
+; than the short 1 block program loader, of course.
+
+; Cartridge 8K ROM origins
+ROM_A: equ  $2000
+ROM_B: equ  $8000
+
+; System variables
+FLAGS:  equ $4001
+ERR_SP: equ $4002
+RAMTOP: equ $4004
+PPC:    equ $4007
+D_FILE: equ $400c
+VARS:   equ $4010
+E_LINE: equ $4014
+CH_ADD: equ $4016
+STKEND: equ $4022
+NXTLIN: equ $4029
+CDFLAG: equ $403b
+LINE1:  equ $407d
+
+NEWLINE: equ $76
+
+; ROM Data block variables
+PCDFLAG: equ $EB
+VARS2L: equ $EC
+VARS2S: equ $EE
+VARS1L: equ $F0
+VARS1S: equ $F2
+PROG2L: equ $F4
+PROG2S: equ $F6
+AUTOLN: equ $F8
+PROG1L: equ $FA
+AUTOAD: equ $FC
+PROG1S: equ $FE
+
+org ROM_A
+
+ld bc, $0000        ; So first byte contains 0x01
+out ($fd),a
+di
+; This appears to be clearing RAM from RAMTOP-1 down to $4000, which includes
+; the system variables, so we have to save RAMTOP in de register to put back
+; after.
+; This is much like the RAM check routine at $03CB that is part of the NEW
+; command, but it omits checking the RAM. That will have already been done, so
+; this is just clearing it.
+ld hl,(RAMTOP)
+ld d,h              ; de=hl
+ld e,l              ; Copy RAMTOP to de (it was already set)
+ld a,0x3f           ; High-byte val to check on hl
+dec hl              ; hl = RAMTOP-1
+LOOPA:
+ld (hl),0x00        ; Store $00 there
+dec hl
+cp h                ; Loop until hl=$3fff (h=$3f)
+jr nz, LOOPA
+ex de,hl            ; Get RAMTOP back from de
+ld (RAMTOP),hl      ; Set RAMTOP back after clearing sys vars area
+dec hl              ; hl = RAMTOP-1
+ld (hl),0x3e        ; Put $3e at top of BASIC RAM
+dec hl              ;
+ld sp,hl            ; Point sp just below that
+dec hl              ;
+dec hl              ;
+ld (ERR_SP),hl      ; Set address of first item on machine stack
+; Other setup
+ld a,0x1e
+ld i,a
+im 1                ; Interrupt mode 1
+ld iy,0x4000        ; Set index to start of RAM
+
+ld a,(ROM_A+PCDFLAG); Get CDFLAG value stored at end of ROM
+ld (iy+0x3b),a      ; Set CDFLAG to stored value
+
+ld hl,(ROM_A+PROG1S); Get block source from end of rom
+ld de,0x407d        ; Set block destination to start of program (16509)
+ld bc,(ROM_A+PROG1L); Get length of block to copy
+ldir                ; Copy first program block
+
+; Check for second prog block to copy and copy it
+ld bc,(ROM_A+PROG2L); Load bc with length of 2nd program block
+ld a,b
+or c
+jr z, PROG2SKIP     ; Skip copy for bc==0
+ld hl,(ROM_A+PROG2S); Get source address of 2nd program block
+ldir                ; Copy program block 2
+
+PROG2SKIP:
+ex de,hl            ; hl <=> de, which is dest byte after program (D_FILE should start there)
+;dec hl              ; Chess inserts a dec hl here, why? The others don't
+ld (D_FILE),hl      ; Set D_FILE location to be after the program
+ld b,0x19           ; Set it up as 25 newlines
+ld a,0x76           ; for a collapsed display file.
+DNL:
+ld (hl),a           
+inc hl
+djnz DNL
+ld (VARS),hl        ; Point VARS to just after display file
+
+call 0x149a         ; CLEAR: clears the variable area (sets hl and E_LINE)
+call 0x14ad         ; CURSOR-IN: sets up lower screen to 2 lines and clear calc stack
+call 0x0207         ; SLOW/FAST: test CDFLAG bit 6 to set mode
+call 0x0a2a         ; CLS: will expand a collapsed display file if enough RAM
+
+ld bc,(ROM_A+VARS1L); Get variables block 1 length
+; If bc==0, no vars block, so skip vars loading
+ld a,b
+or c
+jr z, NOVARS        ; Skip vars copy for bc==0
+
+ld hl,(ROM_A+VARS2L); Get variables block 2 length
+add hl,bc           ; hl=hl+bc = Total vars size
+ld b,h              ; bc = hl = total vars length
+ld c,l              ; so we can make room for the vars bytes
+ld hl,(E_LINE)      ; Get E_LINE
+dec hl              ; Point to the $80 byte at end of current vars
+call 0x099e         ; MAKE-ROOM: Insert bc spaces at hl, making room for the vars block.
+inc hl              ; Point to VARS (hl points to one below the insert point after the LDDR)
+ex de,hl		    ; de=hl to set the destination (VARS) for the vars block
+ld hl,(ROM_A+VARS1S); Get variables block 1 source address
+ld bc,(ROM_A+VARS1L); Get variables block 1 length
+ldir                ; Copy the vars block 1
+ld bc,(ROM_A+VARS2L); Get varaibles block 2 length
+; If bc==0, no vars block 2, so skip loading
+ld a,b
+or c
+jr z, NOVARS        ; Skip vars 2 copy for bc==0
+ld hl,(ROM_A+VARS2S); Get variables block 2 source address
+ldir                ; Copy the vars block 2
+
+NOVARS:
+ld bc,(ROM_A+AUTOLN); Get program line to start
+ld de,(ROM_A+AUTOAD); Get program address to start - this comes from NXTLIN
+ld h,d              ; hl=de so hl sets NXTLIN when we call NEXT-LINE at the end
+ld l,e
+dec de              ; CH_ADD points to one less than NXTLIN
+ld (CH_ADD),de      ; Set address of next char to be interpreted
+ld (PPC),bc         ; Set line number of statement being executed
+ld (iy+022h),0x02   ; Load DF_SZ with 2 lines for lower screen
+ld (iy+001h),080h   ; Load FLAGS with $80
+ld a,0xff
+ld (0x407C),a       ; Why are we setting the usused system variable byte before the first line to $FF?
+jp 0x066c           ; NEXT-LINE: Jump into BASIC. Reads NXTLIN to get address of next BASIC line
+
+end
+
+;org $3FEC
+
+;dw VARS2L 0x0000
+;dw VARS2S 0x0000
+;dw VARS1L 0x0000
+;dw VARS1S 0x0000
+;dw PROG2L 0x0000
+;dw PROG2S 0x0000
+;dw AUTOLN 0x0000
+;dw PROG1L 0x0000
+;dw AUTOAD 0x0000
+;dw PROG1S 0x0000

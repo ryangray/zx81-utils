@@ -74,139 +74,137 @@ typedef unsigned char BYTE;
  */
 
 /* Memory address origins of ROMs */
-#define ORGA 0x2000  // ROM A
-#define ORGB 0x8000  // ROM B
+#define ORGA 0x2000 /* ROM A */
+#define ORGB 0x8000 /* ROM B */
 
 /* Reserved location offsets at the end of the ROM image */
 /* Add ORGA to these offsets to get a memory address */
-#define PCDFLAG 0xEB // Store value of CDFLAG from P file
-#define VARS2L 0xEC // Length of VARS block 2
-#define VARS2S 0xEE // Source address of vars block 2
-#define VARS1L 0xF0 // Length of VARS block 1
-#define VARS1S 0xF2 // Source address of vars block 1
-#define PROG2L 0xF4 // Second program block length (zero if no 2nd program block)
-#define PROG2S 0xF6 // Second program block source address (likely $8000)
-#define AUTOLN 0xF8 // Program line to start: F8=, F9=
-#define PROG1L 0xFA // Length of program block 1
-#define AUTOAD 0xFC // Auto start line address (need to figure)
-#define PROG1S 0xFE // Source address of program block 1
+#define PCDFLAG 0xEB /* Store value of CDFLAG from P file */
+#define VARS2L 0xEC /* Length of VARS block 2 */
+#define VARS2S 0xEE /* Source address of vars block 2 */
+#define VARS1L 0xF0 /* Length of VARS block 1 */
+#define VARS1S 0xF2 /* Source address of vars block 1 */
+#define PROG2L 0xF4 /* Second program block length (zero if no 2nd program block) */
+#define PROG2S 0xF6 /* Second program block source address (likely $8000) */
+#define AUTOLN 0xF8 /* Program line to start */
+#define PROG1L 0xFA /* Length of program block 1 */
+#define AUTOAD 0xFC /* Auto start line address (need to figure) */
+#define PROG1S 0xFE /* Source address of program block 1 */
 
-#define RAMTOP  16388 // 0x4004
-#define PPC     16391 // 0x4007
-#define SYSSAVE 16393 // 0x4009
-#define D_FILE  16396 // 0x400C
-#define VARS    16400 // 0x4010
-#define E_LINE  16404 // 0x4014
-#define CH_ADD  16406 // 0x4016
-#define STKBOT  16410 // 0x401A
-#define STKEND  16412 // 0x401C
-#define NXTLIN  16425 // 0x4029
-#define CDFLAG  16443 // 0x403B
+#define RAMTOP  16388 /* 0x4004 */
+#define PPC     16391 /* 0x4007 */
+#define SYSSAVE 16393 /* 0x4009 */
+#define D_FILE  16396 /* 0x400C */
+#define VARS    16400 /* 0x4010 */
+#define E_LINE  16404 /* 0x4014 */
+#define CH_ADD  16406 /* 0x4016 */
+#define STKBOT  16410 /* 0x401A */
+#define STKEND  16412 /* 0x401C */
+#define NXTLIN  16425 /* 0x4029 */
+#define CDFLAG  16443 /* 0x403B */
 
 BYTE rom[romSize];
 BYTE buff[16384];
 
 BYTE ldr[] = {
-    0x01, 0x00, 0x00,       // ld bc, $0000 (So byte 0 contains 0x01)
-    0xd3, 0xfd,             // out (0fdh),a
-    0xf3,                   // di
-    // This appears to be clearing RAM from RAMTOP-1 down to $4000, which includes
-    // the system variables, so we have to save RAMTOP in de register to put back after.
-    0x2a, 0x04, 0x40,       // ld hl,(RAMTOP)
-    0x54,                   // ld d,h  Copy RAMTOP to de
-    0x5d,                   // ld e,l
-    0x2b,                   // dec hl           hl = RAMTOP-1
-    0x3e, 0x3f,             // ld a,0x3f        High-byte val to check on hl
-    0x36, 0x00,             // ld (hl),0x00     Store $00 there
-    0x2b,                   // dec hl
-    0xbc,                   // cp h             Loop until hl=$3fff (h=$3f)
-    0x20, 0xfa,             // jr nz -6
-    0xeb,                   // ex de,hl         Get RAMTOP back from de
-    0x22, 0x04, 0x40,       // ld (04004h),hl   Set RAMTOP back after clearing sys vars area
-    // Set up stack
-    0x2b,                   // dec hl           hl = RAMTOP-1
-    0x36, 0x3e,             // ld (hl),0x3e     Put $3e at top of BASIC RAM
-    0x2b,                   // dec hl
-    0xf9,                   // ld sp,hl         Point sp just below that
-    0x2b,                   // dec hl
-    0x2b,                   // dec hl
-    0x22, 0x02, 0x40,       // ld (ERR_SP),hl   Set address of first item on machine stack
-    // Other setup
-    0x3e, 0x1e,             // ld a,0x1e
-    0xed, 0x47,             // ld i,a
-    0xed, 0x56,             // im 1
-    0xfd, 0x21, 0x00, 0x40, // ld iy,0x4000     Set index to start of RAM
-    0x3a, 0xeb, 0x20,		// ld a,(ORGA+PCDFLAG); Get CDFLAG value stored at end of ROM 
-    0xfd, 0x77, 0x3b,       // ld (iy+03bh),a   Set CDFLAG
-    0x2a, 0xfe, 0x20,       // ld hl,(ORGA+PROG1S)   Get block source from end of rom
-    0x11, 0x7d, 0x40,       // ld de,0x407d     Set block destination to start of program (16509)
-    0xed, 0x4b, 0xfa, 0x20, // ld bc,(ORGA+PROG1L)   Get length of block to copy
-    0xed, 0xb0,             // ldir             Copy first program block
-    // Check for second prog block to copy and copy it
-    0xed, 0x4b, 0xf4, 0x20, // ld bc,(ORGA+PROG2L)  Load bc with length of 2nd program block
-    0x78,                   // ld a,b
-    0xb1,                   // or c
-    0x28, 0x05,             // jr z, +5         Skip copy for bc==0
-    0x2a, 0xf6, 0x20,       // ld hl,(ORGA+PROG2S)
-    0xed, 0xb0,             // ldir             Copy program block 2
-    0xeb,                   // ex de,hl         hl = de, which is dest byte after program (D_FILE should start there)
-    // Chess inserts a dec hl here, why? 
-    //0x2b,                   // dec hl
-    0x22, 0x0c, 0x40,       // ld (D_FILE),hl   Set D_FILE location to be after the program
-    0x06, 0x19,             // ld b,0x19        Set it up as 25 newlines
-    0x3e, 0x76,             // ld a,0x76
-    0x77,                   // ld (hl),a        for a collapsed display file.
-    0x23,                   // inc hl
-    0x10, 0xfc,             // djnz -4
-    0x22, 0x10, 0x40,       // ld (VARS),hl     Point VARS to just after display file
-    0xcd, 0x9a, 0x14,       // call 0x149a  Do these init vars?
-    0xcd, 0xad, 0x14,       // call 0x14ad  My guess is expand DFILE, which will move 
-    0xcd, 0x07, 0x02,       // call 0x0207  VARS up afterward.
-    0xcd, 0x2a, 0x0a,       // call 0x0a2a  There is supposed to be a 0x80 byte after variables, then E_LINE
-    0xed, 0x4b, 0xf0, 0x20, // ld bc,(ORGA+VARS1L) Get variables block 1 length
-    // If bc==0, no vars block, so skip vars loading
-    0x78,                   // ld a,b
-    0xb1,                   // or c
-    0x28, 0x25,             // jr z, +0x25       Skip vars copy for bc==0
-    0x2a, 0xec, 0x20,       // ld hl,(ORGA+VARS2L) Get variables block 2 length
-    0x09,                   // add hl, bc  hl=hl+bc = Total vars size
-    0x44,                   // ld b,h bc = hl = total vars length
-    0x4d,                   // ld c,l
-    0x2a, 0x14, 0x40,       // ld hl,(E_LINE)   Get new E_LINE
-    0x2b,                   // dec hl           why? Point to the $80 at end of empty vars?
-    0xcd, 0x9e, 0x09,       // call 0x099e      Making room for the vars block? We will have to add VARS1L and VARS2L
-    0x23,                   // inc hl           hl must point to VARS-1 after?
-    0xeb,                   // ex de,hl		    de=hl to set the destination (VARS) for the vars block
-    0x2a, 0xf2, 0x20,       // ld hl,(ORGA+VARS1S) Get variables block 1 source address, $2080
-    0xed, 0x4b, 0xf0, 0x20, // ld bc,(ORGA+VARS1L) Get variables block 1 length
-    0xed, 0xb0,             // ldir             Copy the vars block 1
-    0xed, 0x4b, 0xec, 0x20, // ld bc,(ORGA+VARS2L) Get varaibles block 2 length
-    // If bc==0, no vars block 2, so skip loading
-    0x78,                   // ld a,b
-    0xb1,                   // or c
-    0x28, 0x05,             // jr z, +5         Skip vars 2 copy for bc==0
-    0x2a, 0xee, 0x20,       // ld hl,(ORGA+VARS2S) Get variables block 2 source address
-    0xed, 0xb0,             // ldir             Copy the vars block 2
-    // All done copying, set auto start (what values do we set if no auto start?
-    // zero?)
-    // Why can't these use ld hl,(NN) instead? 
-    0xed, 0x4b, 0xf8, 0x20, // ld bc,(ORGA+AUTOLN) Get program line to start
-    0xed, 0x5b, 0xfc, 0x20, // ld de,(ORGA+AUTOAD) Get program address to start **** This needs to be NXTLIN because we
-    0x62,                   // ld h,d hl=de     For call to NEXT-LINE later     **** dec de to set CH_ADD with it
-    0x6b,                   // ld l,e       
-    0x1b,                   // dec de           CH_ADD points one less than you would think
-    0xed, 0x53, 0x16, 0x40, // ld (CH_ADD),de   Set address of next char to be interpreted
-    0xed, 0x43, 0x07, 0x40, // ld (PPC),bc      Set line number of statement being executed
-    // Set STKEND and FLAGS
-    0xfd, 0x36, 0x22, 0x02, // ld (iy+022h),0x02  Load DF_SZ with 2 lines for lower screen
-    0xfd, 0x36, 0x01, 0x80, // ld (iy+001h),080h  Load FLAGS,$80
-    // Start BASIC interpreter
-    0x3e, 0xff,             // ld a,0xff
-    0x32, 0x7c, 0x40,       // ld (16508),a     Why are we setting the unused byte before the program to $FF?
-    0xc3, 0x6c, 0x06        // jp 0x066c        This sets NXTLIN to hl
+    0x01, 0x00, 0x00,       /* ld bc, $0000 (So byte 0 contains 0x01) */
+    0xd3, 0xfd,             /* out (0fdh),a */
+    0xf3,                   /* di */
+    /* This appears to be clearing RAM from RAMTOP-1 down to $4000, which includes */
+    /* the system variables, so we have to save RAMTOP in de register to put back after. */
+    0x2a, 0x04, 0x40,       /* ld hl,(RAMTOP) */
+    0x54,                   /* ld d,h  Copy RAMTOP to de */
+    0x5d,                   /* ld e,l */
+    0x2b,                   /* dec hl           hl = RAMTOP-1 */
+    0x3e, 0x3f,             /* ld a,0x3f        High-byte val to check on hl */
+    0x36, 0x00,             /* ld (hl),0x00     Store $00 there */
+    0x2b,                   /* dec hl */
+    0xbc,                   /* cp h             Loop until hl=$3fff (h=$3f) */
+    0x20, 0xfa,             /* jr nz -6 */
+    0xeb,                   /* ex de,hl         Get RAMTOP back from de */
+    0x22, 0x04, 0x40,       /* ld (04004h),hl   Set RAMTOP back after clearing sys vars area */
+    /* Set up stack */
+    0x2b,                   /* dec hl           hl = RAMTOP-1 */
+    0x36, 0x3e,             /* ld (hl),0x3e     Put $3e at top of BASIC RAM */
+    0x2b,                   /* dec hl */
+    0xf9,                   /* ld sp,hl         Point sp just below that */
+    0x2b,                   /* dec hl */
+    0x2b,                   /* dec hl */
+    0x22, 0x02, 0x40,       /* ld (ERR_SP),hl   Set address of first item on machine stack */
+    /* Other setup */
+    0x3e, 0x1e,             /* ld a,0x1e */
+    0xed, 0x47,             /* ld i,a */
+    0xed, 0x56,             /* im 1 */
+    0xfd, 0x21, 0x00, 0x40, /* ld iy,0x4000     Set index to start of RAM */
+    0x3a, 0xeb, 0x20,		/* ld a,(ORGA+PCDFLAG); Get CDFLAG value stored at end of ROM  */
+    0xfd, 0x77, 0x3b,       /* ld (iy+03bh),a   Set CDFLAG */
+    0x2a, 0xfe, 0x20,       /* ld hl,(ORGA+PROG1S)   Get block source from end of rom */
+    0x11, 0x7d, 0x40,       /* ld de,0x407d     Set block destination to start of program (16509) */
+    0xed, 0x4b, 0xfa, 0x20, /* ld bc,(ORGA+PROG1L)   Get length of block to copy */
+    0xed, 0xb0,             /* ldir             Copy first program block */
+    /* Check for second prog block to copy and copy it */
+    0xed, 0x4b, 0xf4, 0x20, /* ld bc,(ORGA+PROG2L)  Load bc with length of 2nd program block */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x05,             /* jr z, +5         Skip copy for bc==0 */
+    0x2a, 0xf6, 0x20,       /* ld hl,(ORGA+PROG2S) */
+    0xed, 0xb0,             /* ldir             Copy program block 2 */
+    0xeb,                   /* ex de,hl         hl = de, which is dest byte after program (D_FILE should start there) */
+    /* Chess inserts a dec hl here, why?  */
+    /*0x2b,*/                   /* dec hl */
+    0x22, 0x0c, 0x40,       /* ld (D_FILE),hl   Set D_FILE location to be after the program */
+    0x06, 0x19,             /* ld b,0x19        Set it up as 25 newlines */
+    0x3e, 0x76,             /* ld a,0x76 */
+    0x77,                   /* ld (hl),a        for a collapsed display file. */
+    0x23,                   /* inc hl */
+    0x10, 0xfc,             /* djnz -4 */
+    0x22, 0x10, 0x40,       /* ld (VARS),hl     Point VARS to just after display file */
+    0xcd, 0x9a, 0x14,       /* call 0x149a  Do these init vars? */
+    0xcd, 0xad, 0x14,       /* call 0x14ad  My guess is expand DFILE, which will move  */
+    0xcd, 0x07, 0x02,       /* call 0x0207  VARS up afterward. */
+    0xcd, 0x2a, 0x0a,       /* call 0x0a2a  There is supposed to be a 0x80 byte after variables, then E_LINE */
+    0xed, 0x4b, 0xf0, 0x20, /* ld bc,(ORGA+VARS1L) Get variables block 1 length */
+    /* If bc==0, no vars block, so skip vars loading */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x25,             /* jr z, +0x25       Skip vars copy for bc==0 */
+    0x2a, 0xec, 0x20,       /* ld hl,(ORGA+VARS2L) Get variables block 2 length */
+    0x09,                   /* add hl, bc  hl=hl+bc = Total vars size */
+    0x44,                   /* ld b,h bc = hl = total vars length */
+    0x4d,                   /* ld c,l */
+    0x2a, 0x14, 0x40,       /* ld hl,(E_LINE)   Get new E_LINE */
+    0x2b,                   /* dec hl           why? Point to the $80 at end of empty vars? */
+    0xcd, 0x9e, 0x09,       /* call 0x099e      Making room for the vars block? We will have to add VARS1L and VARS2L */
+    0x23,                   /* inc hl           hl must point to VARS-1 after? */
+    0xeb,                   /* ex de,hl		    de=hl to set the destination (VARS) for the vars block */
+    0x2a, 0xf2, 0x20,       /* ld hl,(ORGA+VARS1S) Get variables block 1 source address */
+    0xed, 0x4b, 0xf0, 0x20, /* ld bc,(ORGA+VARS1L) Get variables block 1 length */
+    0xed, 0xb0,             /* ldir             Copy the vars block 1 */
+    0xed, 0x4b, 0xec, 0x20, /* ld bc,(ORGA+VARS2L) Get varaibles block 2 length */
+    /* If bc==0, no vars block 2, so skip loading */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x05,             /* jr z, +5         Skip vars 2 copy for bc==0 */
+    0x2a, 0xee, 0x20,       /* ld hl,(ORGA+VARS2S) Get variables block 2 source address */
+    0xed, 0xb0,             /* ldir             Copy the vars block 2 */
+    /* All done copying, set auto start */
+    0xed, 0x4b, 0xf8, 0x20, /* ld bc,(ORGA+AUTOLN) Get program line to start */
+    0xed, 0x5b, 0xfc, 0x20, /* ld de,(ORGA+AUTOAD) Get program address to start **** This needs to be NXTLIN because */
+    0x62,                   /* ld h,d hl=de     For call to NEXT-LINE later     **** we dec de to set CH_ADD with it */
+    0x6b,                   /* ld l,e */
+    0x1b,                   /* dec de           CH_ADD points one less than you would think */
+    0xed, 0x53, 0x16, 0x40, /* ld (CH_ADD),de   Set address of next char to be interpreted */
+    0xed, 0x43, 0x07, 0x40, /* ld (PPC),bc      Set line number of statement being executed */
+    /* Set STKEND and FLAGS */
+    0xfd, 0x36, 0x22, 0x02, /* ld (iy+022h),0x02  Load DF_SZ with 2 lines for lower screen */
+    0xfd, 0x36, 0x01, 0x80, /* ld (iy+001h),080h  Load FLAGS,$80 */
+    /* Start BASIC interpreter */
+    0x3e, 0xff,             /* ld a,0xff */
+    0x32, 0x7c, 0x40,       /* ld (16508),a     Why are we setting the unused byte before the program to $FF? */
+    0xc3, 0x6c, 0x06        /* jp 0x066c        This sets NXTLIN to hl */
 };
 
-int ldr_size = sizeof(ldr); // Currently $00b1
+int ldr_size = sizeof(ldr); /* Currently $00b1 */
 
 void cleanup ()
 {
@@ -230,12 +228,11 @@ void printUsage ()
     printf("  -s          Output short ROM files that are not padded to 8K boundaries.\n");
     printf("  -1          Output only a single ROM file.\n");
     printf("  -i          Print the P file and block info but don't output the ROMs.\n");
-    printf("  -h          Print this help.\n");
+    printf("  -?          Print this help.\n");
     printf("The default output file name is taken from the input file name.\n");
     printf("The input can be standard input or you can give '-' as the file name.\n");
     printf("The output can be standard input or you can give '-' as the file name.\n");
     printf("Programs requiring more than one 8K ROM will have '_A', etc. added to the name.\n");
-    exit(EXIT_FAILURE);
 }
 
 
@@ -268,15 +265,15 @@ void parseOptions (int argc, char *argv[])
                 ++argv;
                 --argc;
                 break;
-            case 'h':
-                printUsage();
-                exit(EXIT_SUCCESS);
             case 'i':
                 infoOnly = 1;
                 break;
-            default:
-                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
+            case '?':
                 printUsage();
+                exit(EXIT_SUCCESS);
+            default:
+                printUsage();
+                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                 exit(EXIT_FAILURE);
             }
 	    ++argv;
@@ -466,9 +463,10 @@ int main (int argc, char *argv[])
     b1 = fgetc(in); b2 = fgetc(in);
     ch_add = b1 + 256 * b2;
     fprintf(stderr, "CH_ADD = %d\n", ch_add);
-    // An auto run program in a P file will have this set to NXTLIN-1
-    // A non-autorun program may not have this set as it was not running when
-    // saved. We may have to check for this.
+    /* An auto run program in a P file will have this set to NXTLIN-1
+     * A non-autorun program may not have this set as it was not running when
+     * saved. We may have to check for this.
+     */
 
     /* Skip to NXTLIN variable */
     for (f+=2; f < NXTLIN-SYSSAVE; f++)
@@ -499,12 +497,12 @@ int main (int argc, char *argv[])
 
     if (prog_size > sizeLimit)
         {
-        // Program is split
+        /* Program is split */
         prog1len = sizeLimit;
         prog2len = prog_size - prog1len;
         prog2addr = ORGB;
         prog2offs = 0;
-        // Vars are not
+        /* Vars are not */
         if (includeVars)
             {
             vars1len = vars_size;
@@ -517,7 +515,7 @@ int main (int argc, char *argv[])
         }
     else
         {
-        // Program is not split
+        /* Program is not split */
         prog1len = prog_size;
         prog2len = 0;
         prog2offs = 0;
@@ -526,7 +524,7 @@ int main (int argc, char *argv[])
             {
             if (vars_size > sizeLimit - prog_size)
                 {
-                // Vars are split
+                /* Vars are split */
                 vars1len = sizeLimit - prog_size;
                 vars2len = vars_size - vars1len;
                 vars1offs = prog1offs + prog_size;
@@ -537,7 +535,7 @@ int main (int argc, char *argv[])
                 }
             else
                 {
-                // Vars are not
+                /* Vars are not */
                 vars1len = vars_size;
                 vars1addr = prog1addr + prog1len;
                 vars1offs = prog1offs + prog1len;
@@ -550,42 +548,42 @@ int main (int argc, char *argv[])
     /* Length of 2nd variables block */
     b2 = vars2len / 256;
     b1 = vars2len - b2*256;
-    rom[VARS2L] = b1; // 0x1EC
+    rom[VARS2L] = b1;
     rom[VARS2L+1] = b2;
     /* Address of 2nd variables block */
     b2 = vars2addr / 256;
     b1 = vars2addr - b2 * 256;
-    rom[VARS2S] = b1; // 0x1EE
+    rom[VARS2S] = b1;
     rom[VARS2S+1] = b2;
     /* Length of 1st variables block */
     b2 = vars1len / 256;
     b1 = vars1len - b2 * 256;
-    rom[VARS1L] = b1; // 0x1F0
+    rom[VARS1L] = b1;
     rom[VARS1L+1] = b2;
     /* Address of 1st variables block */
     b2 = vars1addr / 256;
     b1 = vars1addr - b2 * 256;
-    rom[VARS1S] = b1; // 0x1F2
+    rom[VARS1S] = b1;
     rom[VARS1S+1] = b2;
     /* Length of 2nd program block */
     b2 = prog2len / 256;
     b1 = prog2len - b2*256;
-    rom[PROG2L] = b1; // 0x1F4
+    rom[PROG2L] = b1;
     rom[PROG2L+1] = b2;
     /* Address of 2nd program block */
     b2 = prog2addr / 256;
     b1 = prog2addr - b2 * 256;
-    rom[PROG2S] = b1; // 0x1F6
+    rom[PROG2S] = b1;
     rom[PROG2S+1] = b2;
     /* Length of 1st program block */
     b2 = prog1len / 256;
     b1 = prog1len - b2*256;
-    rom[PROG1L] = b1; // 0x1FA
+    rom[PROG1L] = b1;
     rom[PROG1L+1] = b2;
     /* Address of 1st program block */
     b2 = prog1addr / 256;
     b1 = prog1addr - b2*256;
-    rom[PROG1S] = b1; // 0x1FE
+    rom[PROG1S] = b1;
     rom[PROG1S+1] = b2;
     fprintf(stderr, "%5d: Program in ROM, %d bytes\n", prog1addr, prog1len);
     if (prog2len)
@@ -600,13 +598,13 @@ int main (int argc, char *argv[])
     for (f = 0; f < prog_size; f++)
         buff[f] = fgetc(in);
 
-    // Figure out where autoaddr is in rom[] and find the line number (b1,b2)
+    /* Figure out where autoaddr is in rom[] and find the line number (b1,b2) */
     if (autorun < 0) /* No autorun */
         {
-        // This seems to be a special value
+        /* This seems to be a special value */
         b1 = 254;
         b2 = 255;
-        // Not sure yet if this address matters in this case, but it works
+        /* Not sure yet if this address matters in this case, but it works */
         autoaddr = vars;
         }
     else if (0 <= autorun && autorun < 99999) /* Set autorun line other than 0 */
@@ -626,19 +624,19 @@ int main (int argc, char *argv[])
         }
     else if (autoaddr < 16508 || autoaddr >= dfile)
         {
-        // The autorun address is not valid
+        /* The autorun address is not valid */
         b1 = 254;
         b2 = 255;
-        // Do we need to set autoaddr?
+        /* Do we need to set autoaddr? */
         }
     else
         {
         c = autoaddr - 16509;
-        b1 = buff[c];    // Line #
+        b1 = buff[c];    /* Line # */
         b2 = buff[c+1];
         }
     autoline = b1 * 256 + b2;
-    rom[AUTOLN] = b1; // 0xF8
+    rom[AUTOLN]   = b1;
     rom[AUTOLN+1] = b2;
     if (b1 == 254 && b2 == 255)
         fprintf(stderr, "No Autorun\n");
@@ -688,7 +686,7 @@ int main (int argc, char *argv[])
             /* ROM B */
             prevRomSize = 0;
             c = strlen(outroot);
-            outroot[c-1]++; // A->B
+            outroot[c-1]++; /* A->B */
             strcpy(outname, outroot);
             strcat(outname, outext);
             if (infoOnly)
@@ -738,7 +736,7 @@ int main (int argc, char *argv[])
                 /* ROM B */
                 prevRomSize = 0;
                 c = strlen(outroot);
-                outroot[c-1]++; // A->B
+                outroot[c-1]++; /* A->B */
                 strcpy(outname, outroot);
                 strcat(outname, outext);
                 if (infoOnly)

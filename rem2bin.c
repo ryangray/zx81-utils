@@ -7,7 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
 #define REM_code 234
 
 #ifdef __MSDOS__
@@ -23,21 +23,21 @@ enum input_format {IN_GUESS, IN_P, IN_TAP};
 enum input_format in_fmt = IN_GUESS;
 
 
-void print_usage ()
-  {
-  printf("rem2bin %s by Ryan Gray\n", VERSION);
-  printf("Extract codes for 1st line REM statement of a ZX81 P file program.\n");
-  printf("Usage:  rem2bin [-h|-b] [-p|-t] infile > outfile\n");
-  printf("        rem2bin [-h|-b] [-p|-t] -o outfile infile\n");
-  printf("Options are:\n");
-  printf("  -h  : Output is ASCII hex codes\n");
-  printf("  -b  : Output is a binary file (default)\n");
-  printf("  -p  : Input is a P file (if not implied with infile name)\n");
-  printf("  -t  : Input is a TAP file (if not implied with infile name)\n");
-  printf("  -o outputfile  : Give name of output file\n");
-  printf("Give infile name as - to use standard input\n");
-  exit(1);
-  }
+void printUsage ()
+{
+    printf("rem2bin %s by Ryan Gray\n", VERSION);
+    printf("Extract codes for 1st line REM statement of a ZX81 P file program.\n");
+    printf("Usage:  rem2bin [-h|-b] [-p|-t] infile > outfile\n");
+    printf("        rem2bin [-h|-b] [-p|-t] -o outfile infile\n");
+    printf("Options are:\n");
+    printf("  -h             Output is ASCII hex codes\n");
+    printf("  -b             Output is a binary file (default)\n");
+    printf("  -p             Input is a P file (if not implied with infile name)\n");
+    printf("  -t             Input is a TAP file (if not implied with infile name)\n");
+    printf("  -o outputfile  Give name of output file\n");
+    printf("  -?             Print this help\n");
+    printf("Give infile name as - to use standard input\n");
+}
 
 
 void parse_options(int argc, char *argv[])
@@ -65,8 +65,11 @@ void parse_options(int argc, char *argv[])
             case 't':
                 in_fmt = IN_TAP;
                 break;
+            case '?':
+                printUsage();
+                exit(EXIT_SUCCESS);
             default:
-                print_usage();
+                printUsage();
                 exit(EXIT_FAILURE);
             }
 	    ++argv;
@@ -74,7 +77,7 @@ void parse_options(int argc, char *argv[])
         }
     if (argc <= 1)
         {
-        print_usage();
+        printUsage();
         exit(EXIT_FAILURE);
         }
     infile = argv[argc-1];

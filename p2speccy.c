@@ -25,7 +25,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
+
+#ifdef __MSDOS__
+#define STRCMPI strcmpi
+#else
+#define STRCMPI strcasecmp
+#endif
 
 /* Some ZX81 character codes we reference */
 #define K_QUOTE      11
@@ -55,7 +61,8 @@
 #define K_RETURN    254
 
 unsigned char linebuf[32768]; /* Buffer to store a line of code */
-char *infile, *outfile = "";
+char *infile = NULL;
+char *outfile = "";
 int usr_flag = 0;       /* Flags that function was used somewhere (set in 1st pass) */
 int slow_flag = 0;
 int fast_flag = 0;
@@ -630,15 +637,15 @@ void printUsage ()
     printf("Usage:  p2speccy [options] infile.p > outfile\n");
     printf("Usage:  p2speccy [options] -o  outfile infile.p\n");
     printf("Options are:\n");
-    printf("  -z  Output Zmakebas compatible markup\n");
-    printf("  -r  Output a more readable markup (default).\n");
-    printf("      Inverse characters in square brackets, most block graphics.\n");
-    printf("  -o outfile  Give the name of an output file rather than using stdout.\n");
+    printf("  -z            Output Zmakebas compatible markup\n");
+    printf("  -r            Output a more readable markup (default).\n");
+    printf("                Inverse characters in square brackets, most block graphics.\n");
+    printf("  -o outfile    Give the name of an output file rather than using stdout.\n");
+    printf("  -? or --help  Print this usage.\n");
     printf("The Zmakebas output will use \\{xxx} codes in REMs and quotes to preserve\n");
     printf("the non-printable and token character codes, whereas in readable mode, these\n");
     printf("will give a hash (#) character. Zmakebas mode also inserts inverse and true\n");
     printf("video codes where inverse characters appear in REMs and strings.\n");
-    exit(1);
 }
 
 void parseOptions (int argc, char *argv[])
@@ -660,9 +667,31 @@ void parseOptions (int argc, char *argv[])
                 ++argv;
                 --argc;
                 break;
-            default:
-                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
+            case '?':
                 printUsage();
+                exit(EXIT_SUCCESS);
+            case '-':
+                if (strcmp(argv[1],"-") == 0)
+                    {
+                    infile = argv[1];
+                    }
+                else if (STRCMPI(argv[1],"--help") == 0)
+                    {
+                    printUsage();
+                    exit(EXIT_SUCCESS);
+                    }
+                else if (STRCMPI(argv[1],"--version") == 0)
+                    {
+                    printf("%s\n", VERSION);
+                    }
+                else
+                    {
+                    printUsage();
+                    exit(EXIT_FAILURE);
+                    }
+            default:
+                printUsage();
+                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                 exit(EXIT_FAILURE);
             }
 	    ++argv;
@@ -673,7 +702,8 @@ void parseOptions (int argc, char *argv[])
         printUsage();
         exit(EXIT_FAILURE);
         }
-    infile = argv[argc-1];
+    if (!infile)
+        infile = argv[argc-1];
 }
 
 
@@ -683,9 +713,11 @@ int main (int argc, char *argv[])
     int linenum;
 
     if (argc < 2)
+        {
         printUsage();
-    else
-        parseOptions(argc, argv);
+        exit(EXIT_FAILURE);
+        }
+    parseOptions(argc, argv);
 
     if ( strcmp(infile,".") == 0 )
 
@@ -719,7 +751,7 @@ int main (int argc, char *argv[])
         warn = warn_ZMB;
 
     checkFile(in, &linenum); /* 1st pass to check */
-    processFile(in, out);         /* 2nd pass to process */
+    processFile(in, out);    /* 2nd pass to process */
     fclose(in);
     fclose(out);
 

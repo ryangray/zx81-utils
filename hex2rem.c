@@ -7,7 +7,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define VERSION "1.1"
+#define VERSION "1.1.1"
 
 char *infile = NULL;
 char *outfile = NULL;
@@ -15,20 +15,19 @@ enum input_style {IN_HEX, IN_BINARY};
 enum input_style in_fmt = IN_HEX;
 int lineno = 1;
 
-void print_usage ()
+void printUsage ()
   {
   printf("hex2rem %s by Ryan Gray\n", VERSION);
   printf("Make a one-line REM statement from hex codes for zmakebas input.\n");
   printf("Usage:  hex2rem [-?] [-h | -b] [-l nnnn] [infile [outfile]]\n");
   printf("Options are:\n\n");
   
-  printf("  -?        Print this help\n");
   printf("  -h        Input is ASCII hex codes (default)\n");
   printf("  -b        Input is a binary file.\n");
   printf("  -l nnnn   Specify line number of REM (default is 1)\n");
+  printf("  -?        Print this help\n");
   printf("The Zmakebas output will use \\{xxx} codes in the REM to preserve\n");
   printf("the byte codes. Input and output files default to standard in/out.\n");
-  exit(1);
   }
 
 
@@ -51,7 +50,7 @@ void parse_options(int argc, char *argv[])
                 case 'l':
                     if (argc < 3)
                         {
-                        print_usage();
+                        printUsage();
                         exit(EXIT_FAILURE);
                         }
                     aptr = argv[2] + strlen(argv[2]) - 1;
@@ -62,8 +61,12 @@ void parse_options(int argc, char *argv[])
                 case '\0':
                     infile = argv[1];
                     break;
+                case '?':
+                    printUsage();
+                    exit(EXIT_SUCCESS);
                 default:
-                    print_usage();
+                    printUsage();
+                    fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                     exit(EXIT_FAILURE);
                 }
             }
@@ -77,7 +80,7 @@ void parse_options(int argc, char *argv[])
             }
         else
             {
-            print_usage();
+            printUsage();
             exit(EXIT_FAILURE);
             }
 	    ++argv;

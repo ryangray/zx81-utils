@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 #ifdef __MSDOS__
 #define STRCMPI strcmpi
@@ -26,11 +26,12 @@ char *outname; /* Full output filename including a version number */
 char header[19]; /* For reading tap header blocks (not including two block length bytes) */
 FILE *in, *out;
 
-void usageHelp()
+void printUsage()
 {
-    printf("tap0auto v%s - by Ryan Gray\n\n", VERSION);
+    printf("tap0auto %s - by Ryan Gray\n", VERSION);
 
     printf("Usage: tap0auto input_file output_file\n");
+    printf("       tap0auto -?          Print this help.\n");
 }
 
 
@@ -40,11 +41,9 @@ void parseOptions(int argc, char *argv[])
         {
         switch (argv[1][1])
             {
-            case 'h':
             case '?':
-                usageHelp();
-                exit(0);
-                break;
+                printUsage();
+                exit(EXIT_SUCCESS);
             default:
                 if (strcmp(infile,"") == 0)
                     {
@@ -54,8 +53,9 @@ void parseOptions(int argc, char *argv[])
                     outfile = argv[1];
                 else
                     {
-                    usageHelp();
-                    exit(1);
+                    printUsage();
+                    fprintf(stderr, "unknown option: %c\n", argv[1][1]);
+                    exit(EXIT_FAILURE);
                     }
                 break;
             }
@@ -66,7 +66,7 @@ void parseOptions(int argc, char *argv[])
         {
         if (argc <= 1)
             {
-            usageHelp();
+            printUsage();
             exit(EXIT_FAILURE);
             }
         else
@@ -80,7 +80,7 @@ void parseOptions(int argc, char *argv[])
         {
         if (argc <= 1)
             {
-            usageHelp();
+            printUsage();
             exit(EXIT_FAILURE);
             }
         else
@@ -94,7 +94,7 @@ void parseOptions(int argc, char *argv[])
 void unexpectedEOF ()
 {
     fprintf(stderr, "Unexpected end of file.\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 
@@ -140,7 +140,7 @@ int main (int argc, char *argv[])
         if ( in == NULL )
             {
             fprintf(stderr, "Error: couldn't open file '%s'\n", infile);
-            exit(1);
+            exit(EXIT_FAILURE);
             }
         }
 
@@ -154,7 +154,7 @@ int main (int argc, char *argv[])
         if (out == NULL)
             {
             fprintf(stderr, "Couldn't open output file.\n");
-            exit(1);
+            exit(EXIT_FAILURE);
             }
         }
 
@@ -170,7 +170,7 @@ int main (int argc, char *argv[])
         if (blen != 19)
             {
             fprintf(stderr,"Expected a 19 byte block %d for a header block\n", bnum);
-            exit(1);
+            exit(EXIT_FAILURE);
             }
         /* Block type */
         if ((c = fgetc(in)) == EOF)
@@ -178,7 +178,7 @@ int main (int argc, char *argv[])
         if (c != 0x00)
             {
             fprintf(stderr,"Block %d doesn't appear to be a header block\n", bnum);
-            exit(1);
+            exit(EXIT_FAILURE);
             }
         readHeader(); /* Includes check byte but not block length (2 bytes and block type (1 byte) */
         /* Grab file name */
@@ -223,7 +223,7 @@ int main (int argc, char *argv[])
         if (c != 0xFF)
             {
             fprintf(stderr, "Expected block %d to be a data block for '%s'\n", bnum, fname);
-            exit(1);
+            exit(EXIT_FAILURE);
             }
         
         /* Length lo/hi, 0xFF=data*/

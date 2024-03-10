@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
 
 #ifdef __MSDOS__
 #define STRCMPI strcmpi
@@ -61,14 +61,13 @@ FILE *in, *out;
 enum input_style {IN_HEX, IN_BINARY};
 enum input_style in_fmt = IN_BINARY;
 
-void usageHelp()
+void printUsage()
 {
-    printf("hex2tap v%s - by Ryan Gray\n\n", VERSION);
+    printf("hex2tap %s - by Ryan Gray\n\n", VERSION);
 
     printf("Usage: hex2tap [-?] [-h | -b] -a address [-n speccy_filename]\n");
     printf("               [-o output_file] [input_file]\n\n");
 
-    printf("    -?           Print this help\n");
     printf("    -b           Input is a binary file (default)\n");
     printf("    -h           Input is text file of hex codes\n");
     printf("    -a address   Start address of the code (use 0x prefix for hex)\n");
@@ -76,6 +75,7 @@ void usageHelp()
     printf("                 Use '-a SCR' as an alias for '-a 16384' (SCREEN$).\n");
     printf("    -n name      Set Spectrum filename (default is blank or -o name)\n");
     printf("    -o filename  Specify output file name (default is stdout)\n");
+    printf("    -?           Print this help\n");
     printf("\nDefault input is stdin or explicitly with input filename of '-'\n");
 }
 
@@ -116,10 +116,11 @@ void parseOptions(int argc, char *argv[])
                 in_fmt = IN_BINARY;
                 break;
             case '?':
-                usageHelp();
-                exit(0);
+                printUsage();
+                exit(EXIT_SUCCESS);
             default:
-                usageHelp();
+                printUsage();
+                fprintf(stderr, "unknown option: %c\n", argv[1][1]);
                 exit(EXIT_FAILURE);
             }
 	    ++argv;
@@ -127,7 +128,7 @@ void parseOptions(int argc, char *argv[])
         }
     if (argc <= 1)
         {
-        usageHelp();
+        printUsage();
         exit(EXIT_FAILURE);
         }
     infile = argv[argc-1];
@@ -204,9 +205,11 @@ int main (int argc, char *argv[])
     parseOptions(argc, argv);
 
     if (argc < 2)
-        usageHelp();
-    else
-        parseOptions(argc, argv);
+        {
+        printUsage();
+        exit(EXIT_FAILURE);
+        }
+    parseOptions(argc, argv);
 
     if ( strcmp(infile,"-") == 0 )
 
@@ -280,7 +283,8 @@ int main (int argc, char *argv[])
         chk ^= headerbuf[f];
         }
     fputc(chk, out); /* Check byte */
-    //fprintf(stderr,"Header check = %02X\n",chk);
+    /*fprintf(stderr,"Header check = %02X\n",chk);
+    */
 
     /* write data block */
     
@@ -290,7 +294,8 @@ int main (int argc, char *argv[])
         chk ^= filebuf[f];
     fwrite(filebuf, 1, length, out);
     fputc(chk, out);
-    //fprintf(stderr,"Data check = %02X\n",chk);
+    /*fprintf(stderr,"Data check = %02X\n",chk);
+    */
     if (out != stdout)
     	fclose(out);
 

@@ -30,14 +30,14 @@ standard output, so you can redirect to a file if you wish:
 
 The zmakebas output can be run back through that utility to create a .p file 
 again, allowing you to edit the file on your computer and take it back into the
-emulator. There are also utilities to convert the .p file to a .wav file for 
-loading onto a real machine.
+emulator. There are also utilities out there to convert the .p file to a .wav 
+file for loading onto a real machine.
 
 This utility is similar to the `listbasic` utility from the [FUSE emulator][fuse] 
 utilities [`fuse-utils`][fuse-utils] and `tzxcat` from [tzxtools][] which produce
 Spectrum BASIC listings. The [`p2spectrum`](#p2spectrum) utility in this package
 can convert the ZX81 program in a .p file to a Spectrum compatible BASIC program
-in a text file.
+in a text file that can also be used with Zmakebas or ZXText2P.
 
 [fuse]: https://fuse-emulator.sourceforge.net/
 [fuse-utils]: https://sourceforge.net/p/fuse-emulator/fuse-utils/ci/master/tree/
@@ -45,17 +45,33 @@ in a text file.
 
 ## Usage
 
+    p2txt [options] infile.p [> outfile.txt]
+
+Options:
+
+* `-z` : Output Zmakebas compatible markup
+* `-r` : Output a more readable markup (default).
+  Inverse characters in square brackets, most block graphics.
+* `-1` : Output Zmakebas markup but only use codes in a first line that is a REM.
+* `-2` : Output ZXText2P compatible markup
+* `-?` : Print this help.
+
+The Zmakebas output will use `\{xxx}` codes in REMs and quotes to preserve
+the non-printable and token character codes, whereas in readable mode, these
+will give a hash (#) character. Zmakebas mode also inserts inverse and true
+video codes where inverse characters appear in REMs and strings.
+
 ### Readable Style
 
 For the readable style (which is the default):
 
     p2txt -r filename.p
 
-This will show the pound symbol as £, the quote image as "", the block graphics 
-characters as block graphics, and inverse characters as enclosed in square 
-brackets. The block graphics with half grey parts show as \~~ for upper half,
-\,, for lower half, and their inverses are [~~] and [,,]. Other non-printable
-characters print as a hash symbol, #.
+This will show the pound symbol as `£`, the quote image as `""`, the block  
+graphics characters as block graphics, and inverse characters as enclosed in  
+square brackets. The block graphics with half grey parts show as `\~~` for the 
+upper half, `\,,` for lower half, and their inverses are `[~~]` and `[,,]`. 
+Other non-printable characters print as a hash symbol, `#`.
 
 ### ZMakeBas Style
 
@@ -64,7 +80,7 @@ For the zmakebas style:
     p2txt -z filename.p
 
 This uses the conventions of zmakebas so that the output can be run through it
-to reconstruct the .p file. It uses lowercase letters for inverse letters with a 
+to make a .p file. It uses lowercase letters for inverse letters with a 
 backslash before most other inverse characters. The quote image is a backtick 
 (\`), the pound symbol is a double backslash (\\\\), and its inverse is `\@`. 
 
@@ -134,11 +150,23 @@ machine.
 
 ## Usage
 
-    p2speccy -r infile.p > outfile
-    p2speccy -z infile.p > outfile
-    p2speccy -r -o outfile infile.p
+    p2speccy [options] infile.p > outfile
+    p2speccy p2speccy [options] -o outfile infile.p
 
-The `-r` option give a more readable output form with block graphics characters 
+Options:
+
+* `-z` : Output Zmakebas compatible markup
+* `-r` : Output a more readable markup (default).
+  Inverse characters in square brackets, most block graphics.
+* `-o outfile` : Give the name of an output file rather than using stdout.
+* `-?` or `--help` : Print this usage.
+
+The Zmakebas output will use `\{xxx}` codes in REMs and quotes to preserve
+the non-printable and token character codes, whereas in readable mode, these
+will give a hash (#) character. Zmakebas mode also inserts inverse and true
+video codes where inverse characters appear in REMs and strings.
+
+The `-r` option gives a more readable output form with block graphics characters 
 (for most), and brackets around inverse characters. The `-z` output option (the 
 default) is a [zmakebas][] compatible output so you can use that to make a 
 `.tap` file of the result. The `-o` option can be used instead of sandard output 
@@ -255,16 +283,19 @@ file and run through `zmakebas`.
 
 ## Usage
 
-    hex2rem [-h|-b] input_file > output_file
-    hex2rem [-h|-b] -o output_file input_file
-    
-* `-h` : Input are hex values in a text file. These can be on multiple lines,
-    and whitespace is ignored between hex digit pairs. This is the default.
+    hex2rem [-?] [-h | -b] [-l nnnn] [infile [outfile]]
 
+* `-h` : Input are hex values in a text file . These can be on multiple lines,
+  and whitespace is ignored between hex digit pairs. This is the default.
 * `-b` : Input is a binary file.
+* `-l nnnn` : Specify line number of REM to be nnnn (default is 1, max is 9999)
+* `-?` : Print the help summary
 
-Note that `input_file` can be "." to use standard input.
+Note that `input_file` can be "-" to use standard input.
 
+The Zmakebas output will use `\{xxx}` codes in the REM to preserve
+the byte codes. Input and output files default to standard in/out.
+    
 The output is written as one `REM` line with continuation breaks every 10 values
 (a backsash at the ends of the continuing lines). Each value is written with the
 zmakebas literal code escape notation using a hex value:
@@ -295,12 +326,10 @@ disassembler and give it the correct offset to start at (116 for .p, 24 for
 Options:
 
 * `-b` : Output is binary (the default).
-
 * `-h` : Output is hex values as text, written 16 to a line.
-
 * `-p` : Input file is .p format
-
 * `-t` : Input file is .tap format (only reads the first program in the file)
+* `-?` : Print the help summary
 
 Note that `input_file` can be "-" to use standard input. The `-p` and `-t` 
 options aren't necessary if the type can be inferred fron the input file name
@@ -315,6 +344,7 @@ statement, you could extract that to a file and disassemble it:
 TODO: Keep going as long as the first lines are REMs since some programs split
 the MC up between a few REMs. However, some might have comment REMs after the
 MC REMs though.
+
 
 # hex2tap
 
@@ -334,7 +364,7 @@ The default output is to standard output.
     hex2tap [-h|-b] [-n speccy_filename] [-a address] [-o output_file] input_file
     
 * `-h` : Input are hex values in a text file. These can be on multiple lines,
-    and whitespace is ignored between hex digit pairs. This is the default.
+  and whitespace is ignored between hex digit pairs. This is the default.
 
 * `-b` : Input is a binary file.
 
@@ -345,6 +375,8 @@ The default output is to standard output.
 
     - Use `-a UDG` as an alias for `-a 65368` (USR "a")
     - Use `-a SCR` as an alias for `-a 16384` (SCREEN$)
+
+* `-?` : Print the help summary
 
 Note that `input_file` can be "-" to use standard input. `output_file` should
 customarily have a file extension of ".tap", which is not automatically added.
@@ -390,6 +422,7 @@ the BASIC programs in the tap file.
 ## Usage
 
     tap0auto input_file output_file
+    tap0auto -?
 
 This only works on .tap files, so if you have a .tzx file, you need to convert
 it to a .tap file. `tzxtap` from the [tzxtools][] can be used for this.
@@ -428,7 +461,7 @@ unless the `-o` option is given.
 
 Options:
 
-* `-h` - Show the usage help.
+* `-?` - Show the usage help.
 
 * `-o output_file` - Name the output file. The default uses the basename of 
   the input file. You can use `-` to explicitly send to standard output. If
