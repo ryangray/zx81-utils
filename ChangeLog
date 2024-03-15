@@ -1,3 +1,9 @@
+2024-03-15 ryangray
+    * Change the -v option to exclude the variables rather than include them so
+      that the default is to include them.
+    * Change the default to output one ROM file and add the option -2 to make
+      two ROM files if needed.
+
 2024-03-07 ryangray
     * Add option to only print the P file and ROM block info and not write any ROMs.
 

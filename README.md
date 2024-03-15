@@ -467,19 +467,24 @@ Options:
   the input file. You can use `-` to explicitly send to standard output. If
   the output is stdout, then it is the equivalent of using the `-1` option.
 
-* `-v` - Include the variables from the P file.
+* `-v` - The default is to include the variables from the P file. This option
+  will cause the variables data to not be included.
 
 * `-a line_number` - Force the auto run line number. The default is to use
   whatever the P file has, which could be no auto run. You can use `-1` to force
   no auto run.
 
 * `-s` - Write a "short" ROM file that is not padded out to a length multiple 
-  of 8K.
+  of 8K. If the ROM is more than 8K, then the first block is a full 8K, and the
+  second block is short.
 
-* `-1` - For large programs that require more than one 8K ROM, two 8K ROMs are
-  made. By default, two separate files are written with "_A" and "_B" added to
-  the output name. This option puts both 8K blocks into one file. If `-s` is
-  also used, then the first block is a full 8K, and the second block is short.
+* `-2` - For large programs that require more than one 8K ROM, two 8K ROM
+  segments are made. By default, these are concatenated into one file. This is
+  compatible with the [EightyOne][] emulator. If you want two separate ROM 
+  files, use the `-2` option, and the two files are written with "_A" and "_B" 
+  added to the output name. 
+  
+* `-1` - This option puts both 8K blocks into one file. It is the default.
 
 * `-i` - Print the P file and ROM block info without writing any ROMs. This can
   be useful to see if there is any variable data in the P file and what the auto

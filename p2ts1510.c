@@ -53,10 +53,10 @@ char *outfile_malloc = NULL;
 char *outname = NULL;
 char *outext;
 char *outroot;
-int includeVars = 0; /* Some programs need this */
+int includeVars = 1; /* Some programs need vars, so we default to include */
 int autorun = 99999; /* 99999=Default from P file, <0=disable, >=0=set*/
 int shortRomFile = 0;
-int oneRom = 0;
+int oneRom = 1;
 int thisRomSize = 0;
 int prevRomSize = 0; /* Length of ROM written so far */
 int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
@@ -222,11 +222,12 @@ void printUsage ()
     printf("Converts a ZX81 .P file program to a TS1510 cartridge ROM image.\n");
     printf("Usage:  p2ts1510 [options] [infile]\n");
     printf("Options are:\n");
-    printf("  -v          Will cause the variables saved in the P file to be included.\n");
+    printf("  -v          Will cause the variables saved in the P file NOT to be included.\n");
     printf("  -o outfile  Give the name of the output file rather than using the default.\n");
     printf("  -a line     Will set the autorun line number. Negative to disable autorun.\n");
     printf("  -s          Output short ROM files that are not padded to 8K boundaries.\n");
-    printf("  -1          Output only a single ROM file.\n");
+    printf("  -1          Output only a single ROM file (the default).\n");
+    printf("  -2          Output separate (two or more) ROM files.\n");
     printf("  -i          Print the P file and block info but don't output the ROMs.\n");
     printf("  -?          Print this help.\n");
     printf("The default output file name is taken from the input file name.\n");
@@ -248,6 +249,9 @@ void parseOptions (int argc, char *argv[])
             case '1':
                 oneRom = 1;
                 break;
+            case '2':
+                oneRom = 0;
+                break;
             case 's':
                 shortRomFile = 1;
                 break;
@@ -258,7 +262,7 @@ void parseOptions (int argc, char *argv[])
                 --argc;
                 break;
             case 'v':
-                includeVars = 1;
+                includeVars = 0;
                 break;
             case 'o':
                 outfile = argv[2];
@@ -488,7 +492,7 @@ int main (int argc, char *argv[])
 
     /* Skip the remainder of the system vars to get to the program */
     for (f+=1; f < 116; f++)
-        fgetc(in);
+        b1 = fgetc(in);
     
     /* If prog bigger than 8K, then set end point for first ROM */
 
