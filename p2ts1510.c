@@ -772,6 +772,6 @@ int main (int argc, char *argv[])
         fclose(out);
     fclose(in);
     cleanup();
-    exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 
 }
