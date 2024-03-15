@@ -54,7 +54,7 @@ char *outname = NULL;
 char *outext;
 char *outroot;
 int includeVars = 1; /* Some programs need vars, so we default to include */
-int autorun = 99999; /* 99999=Default from P file, <0=disable, >=0=set*/
+int autorun = 10000; /* 10000=Use the setting in the P file, <0=disable, >=0=set*/
 int shortRomFile = 0;
 int oneRom = 1;
 int thisRomSize = 0;
@@ -611,7 +611,7 @@ int main (int argc, char *argv[])
         /* Not sure yet if this address matters in this case, but it works */
         autoaddr = vars;
         }
-    else if (0 <= autorun && autorun < 99999) /* Set autorun line other than 0 */
+    else if (0 <= autorun && autorun < 10000) /* Set autorun line other than 0 */
         {
         f = findLine(autorun);
         if (f < 0)
