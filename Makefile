@@ -99,7 +99,7 @@ p2ts1510-all: p2ts1510
 
 p2ts1510: p2ts1510.o
 
-p2ts1510-loader: p2ts1510-loader.bin
+p2ts1510-loader: p2ts1510_loader.bin
 
 .PHONY: clean
 
