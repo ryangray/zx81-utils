@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 #define romSize 8192       /* 8K buffer for making the ROMs, even if a 16K one */
 #define dataOffset  0x0100 /* Where data starts in the first ROM */
@@ -307,12 +307,12 @@ void writeROM(FILE *out, int endRom)
     int f, len;
 
     if (shortRomFile)
-        len = prevRomSize + thisRomSize;
+        len = thisRomSize;
     else
-        len = prevRomSize + romSize;
+        len = romSize;
     if (endRom)
         {
-        fprintf(stderr, "ROM : %s\nSize: %d bytes", outname, len);
+        fprintf(stderr, "ROM : %s\nSize: %d bytes", outname, prevRomSize + len);
         if (infoOnly)
             fprintf(stderr, " (not written)\n");
         else
@@ -630,7 +630,21 @@ int main (int argc, char *argv[])
         b1 = buff[f];
         b2 = buff[f+1];
         }
-    else if (autoaddr < 16509 || autoaddr >= dfile) /* The autorun address is not valid */
+    else if (autoaddr == dfile)
+        {
+        /* Try setting it to the last line */
+        f = dfile - 2 - 16509;
+        while (f >= 0 && buff[f] != 0x76)
+            f--;
+        f++;
+        autoaddr = 16509 + f;
+        /* Get actual line number bytes */
+        b1 = buff[f];
+        b2 = buff[f+1];
+        fprintf(stderr,"Autorun address is D_FILE, setting to last line.\n");
+        autorun_error = 1;
+        }
+    else if (autoaddr < 16509 || autoaddr > dfile) /* The autorun address is not valid */
         {
         /* Set no autorun */
         b1 = 254;
