@@ -45,8 +45,11 @@
 #define dataOffset  0x0100 /* Where data starts in the first ROM */
 #define romReserved 0x2000 /* Where reserved bytes at end of 1st ROM start */
 
-int prog_size = 0;
-int const sizeLimit = romReserved - dataOffset; /* Space in ROM A for data */
+typedef unsigned char BYTE;
+typedef unsigned short int ADDR;
+
+ADDR prog_size = 0;
+ADDR const sizeLimit = romReserved - dataOffset; /* Space in ROM A for data */
 char *infile = "";
 char *outfile = "";
 char *outfile_malloc = NULL;
@@ -60,10 +63,6 @@ int oneRom = 1;
 int thisRomSize = 0;
 int prevRomSize = 0; /* Length of ROM written so far */
 int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
-
-/* We will be writing 1 or two ROM images, and later perhaps a cart image file
-*/
-typedef unsigned char BYTE;
 
 /* Memory map:
  *
@@ -105,6 +104,7 @@ typedef unsigned char BYTE;
 
 BYTE rom[romSize];
 BYTE buff[16384];
+BYTE sys[116];
 
 BYTE ldr[] = {
     0x01, 0x00, 0x00,       /* ld bc, $0000 (So byte 0 contains 0x01) */
@@ -204,7 +204,7 @@ BYTE ldr[] = {
     0xc3, 0x6c, 0x06        /* jp 0x066c        This sets NXTLIN to hl */
 };
 
-int ldr_size = sizeof(ldr); /* Currently $00b1 */
+ADDR ldr_size = sizeof(ldr); /* Currently $00b5 */
 
 void cleanup ()
 {
@@ -302,27 +302,26 @@ int findFileExtension (char *str)
 }
 
 
-void writeROM(FILE *out, int last)
+void writeROM(FILE *out, int endRom)
 {
-    int f;
-    if (shortRomFile && last)
-        {
-        if (!infoOnly)
-            {
-            for (f = 0; f < thisRomSize; f++)
-                fputc(rom[f], out);
-            }
-        fprintf(stderr, "  %d bytes\n", prevRomSize + thisRomSize);
-        }
+    int f, len;
+
+    if (shortRomFile)
+        len = prevRomSize + thisRomSize;
     else
+        len = prevRomSize + romSize;
+    if (endRom)
         {
-        if (!infoOnly)
-            {
-            for (f = 0; f < romSize; f++)
-                fputc(rom[f], out);
-            }
-        if (last)
-            fprintf(stderr, "  %d bytes\n", prevRomSize + romSize);
+        fprintf(stderr, "ROM : %s\nSize: %d bytes", outname, len);
+        if (infoOnly)
+            fprintf(stderr, " (not written)\n");
+        else
+            fprintf(stderr,"\n");
+        }
+    if (!infoOnly)
+        {
+        for (f = 0; f < len; f++)
+            fputc(rom[f], out);
         }
 }
 
@@ -347,26 +346,47 @@ int findLine (int l)
 }
 
 
+BYTE sysByte (ADDR addr)
+{
+    return sys[addr - SYSSAVE];
+}
+
+ADDR sysAddr (ADDR addr)
+{
+    ADDR i = addr - SYSSAVE;
+    return sys[i] + 256 * sys[i+1];
+}
+
+
+void romStoreAddr (int i, ADDR addr)
+{
+    BYTE h = addr / 256;
+    rom[i] = addr - h * 256;
+    rom[i+1] = h;
+}
+
+
 int main (int argc, char *argv[])
 {
     FILE *in = NULL, *out = NULL;
     int f, b1, b2, c;
-    int dfile, vars, eline;
-    int dfile_size, vars_size;
-    int autoaddr, autoline, ch_add, nxtlin;
-    int prog1len = 0;
-    int vars1len = 0;
-    int prog1offs = dataOffset;
-    int prog1addr = 0;
-    int vars1addr = 0;
-    int prog2addr = 0;
-    int vars2addr = 0;
-    int vars1offs = 0;
-    int prog2len = 0;
-    int vars2len = 0;
-    int prog2offs = 0;
+    ADDR dfile, dfile_size;
+    ADDR vars, vars_size;
+    ADDR eline, ch_add, nxtlin;
+    ADDR autoaddr, autoline;
+    ADDR prog1len = 0;
+    ADDR vars1len = 0;
+    ADDR prog1offs = dataOffset;
+    ADDR prog1addr = 0;
+    ADDR vars1addr = 0;
+    ADDR prog2addr = 0;
+    ADDR vars2addr = 0;
+    ADDR vars1offs = 0;
+    ADDR prog2len = 0;
+    ADDR vars2len = 0;
+    ADDR prog2offs = 0;
     char R[] = "_A";
-
+    int autorun_error = 0;
 
     parseOptions(argc, argv);
  
@@ -437,64 +457,50 @@ int main (int argc, char *argv[])
 
     /* Load the .P file system vars to get the program size */
 
-    /* Skip to D_FILE variable */
-    for (f = 0; f < D_FILE-SYSSAVE; f++)
-        fgetc(in);
-    b1 = fgetc(in); b2 = fgetc(in);
-    dfile = b1 + 256 * b2;
+    /* Load the 116 bytes of system variables at the start of the P file */
+    for (f = 0; f <  116; f++)
+        sys[f] = fgetc(in);
+
+    if (sys[0] != 0)
+        {
+        fprintf(stderr,"Doesn't appear to be a valid ZX81 P file.\n");
+        exit(EXIT_FAILURE);
+        }
+
+    dfile = sysAddr(D_FILE); /* Get value of D_FILE from system variables */
     prog_size = dfile - 16509; /* The prog is from 16509 to dfile-1 in RAM */
     fprintf(stderr, "16509: Program, %d bytes\n", prog_size);
 
-    /* Skip to VARS variable */
-    for (f+=2; f < VARS-SYSSAVE; f++)
-        fgetc(in);
-    b1 = fgetc(in); b2 = fgetc(in);
-    vars = b1 + 256 * b2;
+    vars = sysAddr(VARS);
     dfile_size = vars - dfile;
     fprintf(stderr, "%5d: D_FILE, %d bytes\n", dfile, dfile_size);
 
-    /* Skip to E_LINE variable */
-    for (f+=2; f < E_LINE-SYSSAVE; f++)
-        fgetc(in);
-    b1 = fgetc(in); b2 = fgetc(in);
-    eline = b1 + 256 * b2;
+    eline = sysAddr(E_LINE);
     vars_size = eline - vars - 1;
     fprintf(stderr, "%5d: VARS, %d bytes\n", vars, vars_size);
     fprintf(stderr, "%5d: E_LINE\n", eline);
 
-    /* Next is CH_ADD variable */
-    f += 2;
-    b1 = fgetc(in); b2 = fgetc(in);
-    ch_add = b1 + 256 * b2;
+    ch_add = sysAddr(CH_ADD);
     fprintf(stderr, "CH_ADD = %d\n", ch_add);
-    /* An auto run program in a P file will have this set to NXTLIN-1
+
+    /* An auto run program in a P file will have CH_ADD set to NXTLIN-1.
      * A non-autorun program may not have this set as it was not running when
-     * saved. We may have to check for this.
+     * saved.
      */
 
-    /* Skip to NXTLIN variable */
-    for (f+=2; f < NXTLIN-SYSSAVE; f++)
-        fgetc(in);
-    b1 = fgetc(in); b2 = fgetc(in);
-    nxtlin = b1 + 256 * b2;
+    /* NXTLIN has the autostart address, which is the first byte of the line */
+    nxtlin = sysAddr(NXTLIN);
     fprintf(stderr, "NXTLIN = %d\n", nxtlin);
-    /* Use this instead of ch_add */
-    autoaddr = nxtlin;
     /* Set as default unless -a option overrides */
-    rom[AUTOAD]   = b1;
-    rom[AUTOAD+1] = b2;
+    autoaddr = nxtlin;
+    /* Copy NXTLIN to ROM */
+    rom[AUTOAD]   = sysByte(NXTLIN);
+    rom[AUTOAD+1] = sysByte(NXTLIN+1);
 
-    /* Skip to CDFLAG variable */
-    for (f+=2; f < CDFLAG-SYSSAVE; f++)
-        fgetc(in);
-    rom[PCDFLAG] = fgetc(in);
+    rom[PCDFLAG] = sysByte(CDFLAG);
     fprintf(stderr, "CDFLAG = %02x\n", rom[PCDFLAG]);
 
-    /* Skip the remainder of the system vars to get to the program */
-    for (f+=1; f < 116; f++)
-        b1 = fgetc(in);
-    
-    /* If prog bigger than 8K, then set end point for first ROM */
+    /* Work out program and variable blocks for storing in ROM */
 
     prog1offs = dataOffset;
     prog1addr = ORGA + dataOffset;
@@ -502,17 +508,27 @@ int main (int argc, char *argv[])
     if (prog_size > sizeLimit)
         {
         /* Program is split */
-        prog1len = sizeLimit;
-        prog2len = prog_size - prog1len;
-        prog2addr = ORGB;
+        prog1len  = sizeLimit;
+        prog2len  = prog_size - prog1len;
+        prog2addr = ORGB; /* 2nd part starts on ROM B */
         prog2offs = 0;
-        /* Vars are not */
+        /* Vars are not split but are on ROM B */
         if (includeVars)
             {
-            vars1len = vars_size;
-            vars2len = 0;
+            if (prog2len + vars_size > romSize)
+                {
+                fprintf(stderr, "Error: Program + variables size is larger than two 8K ROMs.\n");
+                exit(EXIT_FAILURE);
+                }
+            vars1len  = vars_size;
+            vars2len  = 0;
             vars1offs = prog2offs + prog2len;
             vars1addr = prog2addr + prog2len;
+            }
+        else if (prog2len > romSize)
+            {
+            fprintf(stderr, "Error: Program size is larger than two 8K ROMs.\n");
+            exit(EXIT_FAILURE);
             }
         if (!oneRom)
             strcat(outroot, R);
@@ -520,8 +536,8 @@ int main (int argc, char *argv[])
     else
         {
         /* Program is not split */
-        prog1len = prog_size;
-        prog2len = 0;
+        prog1len  = prog_size;
+        prog2len  = 0;
         prog2offs = 0;
         prog2addr = 0;
         if (includeVars)
@@ -529,138 +545,194 @@ int main (int argc, char *argv[])
             if (vars_size > sizeLimit - prog_size)
                 {
                 /* Vars are split */
-                vars1len = sizeLimit - prog_size;
-                vars2len = vars_size - vars1len;
+                vars1len  = sizeLimit - prog_size;
+                vars2len  = vars_size - vars1len;
                 vars1offs = prog1offs + prog_size;
                 vars1addr = prog1addr + prog_size;
                 vars2addr = ORGB;
+                if (vars2len > romSize)
+                    {
+                    fprintf(stderr, "Error: Program + variables size is larger than two 8K ROMs.\n");
+                    exit(EXIT_FAILURE);
+                    }
                 if (!oneRom)
                     strcat(outroot, R);
                 }
             else
                 {
-                /* Vars are not */
-                vars1len = vars_size;
+                /* Vars are not split */
+                vars1len  = vars_size;
+                vars2len  = 0;
                 vars1addr = prog1addr + prog1len;
                 vars1offs = prog1offs + prog1len;
-                vars2len = 0;
                 }
             }
         }
-    /* Set block info at end of ROM */
 
-    /* Length of 2nd variables block */
-    b2 = vars2len / 256;
-    b1 = vars2len - b2*256;
-    rom[VARS2L] = b1;
-    rom[VARS2L+1] = b2;
-    /* Address of 2nd variables block */
-    b2 = vars2addr / 256;
-    b1 = vars2addr - b2 * 256;
-    rom[VARS2S] = b1;
-    rom[VARS2S+1] = b2;
-    /* Length of 1st variables block */
-    b2 = vars1len / 256;
-    b1 = vars1len - b2 * 256;
-    rom[VARS1L] = b1;
-    rom[VARS1L+1] = b2;
-    /* Address of 1st variables block */
-    b2 = vars1addr / 256;
-    b1 = vars1addr - b2 * 256;
-    rom[VARS1S] = b1;
-    rom[VARS1S+1] = b2;
-    /* Length of 2nd program block */
-    b2 = prog2len / 256;
-    b1 = prog2len - b2*256;
-    rom[PROG2L] = b1;
-    rom[PROG2L+1] = b2;
-    /* Address of 2nd program block */
-    b2 = prog2addr / 256;
-    b1 = prog2addr - b2 * 256;
-    rom[PROG2S] = b1;
-    rom[PROG2S+1] = b2;
-    /* Length of 1st program block */
-    b2 = prog1len / 256;
-    b1 = prog1len - b2*256;
-    rom[PROG1L] = b1;
-    rom[PROG1L+1] = b2;
-    /* Address of 1st program block */
-    b2 = prog1addr / 256;
-    b1 = prog1addr - b2*256;
-    rom[PROG1S] = b1;
-    rom[PROG1S+1] = b2;
-    fprintf(stderr, "%5d: Program in ROM, %d bytes\n", prog1addr, prog1len);
+    /* Set block info in ROM */
+
+    romStoreAddr(VARS2L, vars2len);     /* Length  of 2nd variables block */
+    romStoreAddr(VARS2S, vars2addr);    /* Address of 2nd variables block */
+    romStoreAddr(VARS1L, vars1len);     /* Length  of 1st variables block */
+    romStoreAddr(VARS1S, vars1addr);    /* Address of 1st variables block */
+    romStoreAddr(PROG2L, prog2len);     /* Length  of 2nd program block */
+    romStoreAddr(PROG2S, prog2addr);    /* Address of 2nd program block */
+    romStoreAddr(PROG1L, prog1len);     /* Length  of 1st program block */
+    romStoreAddr(PROG1S, prog1addr);    /* Address of 1st program block */
+
+    fprintf(stderr," 8192: ROM loader in ROM, 256 bytes\n");
+
     if (prog2len)
+        {
+        fprintf(stderr, "%5d: Program segment 1 in ROM, %d bytes\n", prog1addr, prog1len);
         fprintf(stderr, "%5d: Program segment 2 in ROM, %d bytes\n", prog2addr, prog2len);
+        }
+    else
+        fprintf(stderr, "%5d: Program in ROM, %d bytes\n", prog1addr, prog1len);
+
     if (includeVars)
         {
-        fprintf(stderr, "%5d: Variables in ROM, %d bytes\n", vars1addr, vars1len);
         if (vars2len)
+            {
+            fprintf(stderr, "%5d: Variables segment 1 in ROM, %d bytes\n", vars1addr, vars1len);
             fprintf(stderr, "%5d: Variables segment 2 in ROM, %d bytes\n", vars2addr, vars2len);
+            }
+        else
+            fprintf(stderr, "%5d: Variables in ROM, %d bytes\n", vars1addr, vars1len);
         }
+
     /* Read program into buffer */
     for (f = 0; f < prog_size; f++)
         buff[f] = fgetc(in);
 
-    /* Figure out where autoaddr is in rom[] and find the line number (b1,b2) */
-    if (autorun < 0) /* No autorun */
+    /* Sort out the autorun address and line number */
+
+    if (autorun < 0) /* No autorun forced by '-a -1' option */
         {
-        /* This seems to be a special value */
+        /* This seems to be a special value for no autorun */
         b1 = 254;
         b2 = 255;
         /* Not sure yet if this address matters in this case, but it works */
         autoaddr = vars;
         }
-    else if (0 <= autorun && autorun < 10000) /* Set autorun line other than 0 */
+    else if (0 <= autorun && autorun < 10000) /* Autorun line set by '-a' option */
         {
+        /* f points to the autorun line or the next line */
         f = findLine(autorun);
         if (f < 0)
             {
             fprintf(stderr,"Autorun line %d not found.\n", autorun);
             exit(EXIT_FAILURE);
             }
-        /* f points to the autorun line or the next line */
-        autoaddr = 16509 + f;
         /* Overwrite address from P file */
+        autoaddr = 16509 + f;
         /* Get actual line number bytes */
         b1 = buff[f];
         b2 = buff[f+1];
         }
-    else if (autoaddr < 16508 || autoaddr >= dfile)
+    else if (autoaddr < 16509 || autoaddr >= dfile) /* The autorun address is not valid */
         {
-        /* The autorun address is not valid */
+        /* Set no autorun */
         b1 = 254;
         b2 = 255;
-        /* Do we need to set autoaddr? */
+        autoaddr = b1 + 256 * b2;
+        fprintf(stderr,"Autorun address (%d) is not valid, setting no autorun.\n", autoaddr);
+        autoaddr = vars;
+        }
+    else /* Use valid autorun from P file */
+        {
+        f = autoaddr - 16509;
+        /* Get actual line number bytes */
+        b1 = buff[f];
+        b2 = buff[f+1];
+        }
+
+    autoline = b1 * 256 + b2;
+
+    if (b1 != 254 || b2 != 255) /* Autorun is set */
+        {
+        /* Do some sanity checks as some P files have issues */
+        if (autoline > 9999)
+            {
+            fprintf(stderr,"Warning: autorun line %d is out of range.\n", autoline);
+            autorun_error = 1;
+            }
+        c = findLine(autoline);
+        if (c < 0)
+            {
+            fprintf(stderr,"Warning: autorun line %d was not found.\n", autoline);
+            autorun_error = 1;
+            }
+        else if (c != f)
+            {
+            fprintf(stderr,"Warning: autorun line %d was not found at autorun address.\n", autoline);
+            autorun_error = 1;
+            }
+        if (f == 0)
+            {
+            fprintf(stderr,"Warning: autorun line is the first line. This is usually not possible.\n");
+            autorun_error = 1;
+            }
+        else if (buff[f-1] != 0x76)
+            {
+            fprintf(stderr,"Warning: Autorun address may be bad or P file corrupt.\n");
+            fprintf(stderr,"         Byte before this address should be a newline.\n");
+            autorun_error = 1;
+            }
+        else
+            {
+            /* Check if the previous line is a SAVE command */
+            c = f - 2;
+            while (c >= 0 && buff[c] != 0x76)
+                c--;
+            c += 5;
+            if (buff[c] != 0xF8)
+                {
+                fprintf(stderr,"Warning: Line before autorun line is not a SAVE command.\n");
+                autorun_error = 1;
+                }
+            else
+                {
+                /* Look at end of the SAVE command for an inverted character */
+                if (buff[f-2] == 11 && buff[f-3] < 128)
+                    {
+                    fprintf(stderr,"Warning: Filename of SAVE before autorun line doesn't end with an inverse char.\n");
+                    autorun_error = 1;
+                    }
+                }
+            }
+        }
+
+    rom[AUTOLN]   = b1;
+    rom[AUTOLN+1] = b2;
+    romStoreAddr(AUTOAD, autoaddr);
+    fprintf(stderr, "Autorun addr = %d\n", autoaddr);
+    if (b1 == 254 && b2 == 255)
+        {
+        fprintf(stderr, "No Autorun\n");
+        if (autorun_error == 1)
+            {
+            fprintf(stderr,"Warning: There were possible issues with autorun. You can check the code for\n");
+            fprintf(stderr,"what line it should be and use the '-a' option to set the correct start line.\n");
+            fprintf(stderr,"The line is normally the line after a SAVE command.\n");
+            }
         }
     else
         {
-        c = autoaddr - 16509;
-        b1 = buff[c];    /* Line # */
-        b2 = buff[c+1];
-        }
-    autoline = b1 * 256 + b2;
-    rom[AUTOLN]   = b1;
-    rom[AUTOLN+1] = b2;
-    if (b1 == 254 && b2 == 255)
-        fprintf(stderr, "No Autorun\n");
-    else
         fprintf(stderr, "Autorun line = %d\n", autoline);
-    b2 = autoaddr / 256;
-    b1 = autoaddr - 256 * b2;
-    rom[AUTOAD]   = b1;
-    rom[AUTOAD+1] = b2;
-    fprintf(stderr, "Autorun addr = %d\n", autoaddr);
+        if (autorun_error == 1)
+            {
+            fprintf(stderr,"Warning: There were possible issues with autorun. You can use the '-a' option\n");
+            fprintf(stderr,"with -1 as the line number to disable and check the code for the correct line.\n");
+            fprintf(stderr,"The line is normally the line after a SAVE command.\n");
+            }
+        }
 
     if (!out)
         {
         strcpy(outname, outroot);
         strcat(outname, outext);
-        if (infoOnly)
-            {
-            fprintf(stderr, "ROM: %s\n", outname);
-            }
-        else
+        if (!infoOnly)
             {
             out = fopen(outname, "w");
             if ( out == NULL )
@@ -669,7 +741,6 @@ int main (int argc, char *argv[])
                 cleanup();
                 exit(EXIT_FAILURE);
                 }
-            fprintf(stderr, "Writing: %s\n", outname);
             }
         }
 
@@ -693,15 +764,11 @@ int main (int argc, char *argv[])
             outroot[c-1]++; /* A->B */
             strcpy(outname, outroot);
             strcat(outname, outext);
-            if (infoOnly)
-                {
-                fprintf(stderr, "ROM: %s\n", outname);
-                }
-            else
+            if (!infoOnly)
                 {
                 fclose(out);
                 out = fopen(outname,"w");
-                if ( out == NULL )
+                if (out == NULL)
                     {
                     fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
                     cleanup();
@@ -737,10 +804,10 @@ int main (int argc, char *argv[])
                 }
             else
                 {
-                /* ROM B */
+                /* Prepare ROM B file */
                 prevRomSize = 0;
                 c = strlen(outroot);
-                outroot[c-1]++; /* A->B */
+                outroot[c-1]++; /* Change 'A' to 'B' */
                 strcpy(outname, outroot);
                 strcat(outname, outext);
                 if (infoOnly)
@@ -766,6 +833,7 @@ int main (int argc, char *argv[])
             thisRomSize = vars2len;
             }
         }
+
     /* All done */
     writeROM(out, 1);
     if (!infoOnly)
