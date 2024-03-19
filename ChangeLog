@@ -1,3 +1,10 @@
+2024-03-19 ryangray
+    * Add clearer info output and include some autorun problem detection
+    * Add case when NXTLIN equals D_FILE and try to use the last line for
+      autorun.
+    * Add printing of the autorun line BASIC code to the info output. 
+    * Clean up the code some.
+
 2024-03-15 ryangray
     * Change the -v option to exclude the variables rather than include them so
       that the default is to include them.

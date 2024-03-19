@@ -206,6 +206,84 @@ BYTE ldr[] = {
 
 ADDR ldr_size = sizeof(ldr); /* Currently $00b5 */
 
+#define NAK "#"
+/* Define character strings for DOS Code Page 437 */
+#ifdef __MSDOS__
+#define POUND "\x9C"
+#define BLK "\xDB"
+#define BTM "\xDC"
+#define BUL "\\' "
+#define BUR "\\ '"
+#define TOP "\xDF"
+#define BLF "\xDD"
+#define BRT "\xDE"
+#define BGY "\xB1"
+#define BUP "\\.'"
+#define BDN "\\'."
+#define BLL "\\. "
+#define BLR "\\ ."
+#define ILR "\\:'"
+#define ILL "\\':"
+#define IUL "\\.:"
+#define IUR "\\:."
+#else
+#define POUND "£"
+#define BLK "█"
+#define BTM "▄"
+#define BUL "▘"
+#define BUR "▝"
+#define TOP "▀"
+#define BLF "▌"
+#define BRT "▐"
+#define BGY "▒"
+#define BUP "▞"
+#define BDN "▚"
+#define BLL "▖"
+#define BLR "▗"
+#define ILR "▛"
+#define ILL "▜"
+#define IUL "▟"
+#define IUR "▙"
+#endif
+
+char *tokens[256]=
+{
+/*            spc \'  \ ' \'' \.  \:  \.' \:' \!:  \!. */
+/* 000-009 */ " ",BUL,BUR,TOP,BLL,BLF,BUP,ILR,BGY,"\\,,",
+/* 010-019 */ "\\~~","\"",POUND,"$",":","?","(",")",">","<",
+/* 020-029 */ "=","+","-","*","/",";",",",".","0","1",
+/* 030-039 */ "2","3","4","5","6","7","8","9","A","B",
+/* 040-049 */ "C","D","E","F","G","H","I","J","K","L",
+/* 050-059 */ "M","N","O","P","Q","R","S","T","U","V",
+/* 060-069 */ "W","X","Y","Z","RND","INKEY$ ","PI",NAK,NAK,NAK,
+/* 070-079 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
+/* 080-089 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
+/* 090-099 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
+/* 100-109 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
+/* 110-119 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,NAK,NAK,
+/* 120-129 */ NAK,NAK,NAK,NAK,NAK, NAK,NAK,NAK,BLK,IUL, /* \:: \.: */
+/*            \:. \.. \': \ : \'.  \ .     \|: */
+/* 130-139 */ IUR,BTM,ILL,BRT,BDN, BLR,"[" BGY "]","[,,]","[~~]","[\"]",
+/* 140-149 */ "[" POUND "]","[$]","[:]","[?]","[(]","[)]","[>]","[<]","[=]","[+]",
+/* 150-159 */ "[-]","[*]","[/]","[;]","[,]","[.]","[0]","[1]","[2]","[3]",
+/* 160-169 */ "[4]","[5]","[6]","[7]","[8]","[9]","[A]","[B]","[C]","[D]",
+/* 170-179 */ "[E]","[F]","[G]","[H]","[I]","[J]","[K]","[L]","[M]","[N]",
+/* 180-189 */ "[O]","[P]","[Q]","[R]","[S]","[T]","[U]","[V]","[W]","[X]",
+/* 190-199 */ "[Y]","[Z]","\"\"","AT ","TAB ",NAK,"CODE ","VAL ","LEN ","SIN ",
+/* 200-209 */ "COS ","TAN ","ASN ","ACS ","ATN ","LN ","EXP ",
+		"INT ","SQR ","SGN ",
+/* 210-219 */ "ABS ","PEEK ","USR ","STR$ ","CHR$ ","NOT ",
+		"**"," OR "," AND ","<=",
+/* 220-229 */ ">=","<>"," THEN"," TO "," STEP "," LPRINT ",
+		" LLIST "," STOP"," SLOW"," FAST",
+/* 230-239 */ " NEW"," SCROLL"," CONT "," DIM "," REM "," FOR "," GOTO ",
+		" GOSUB "," INPUT "," LOAD ",
+/* 240-249 */ " LIST "," LET "," PAUSE "," NEXT "," POKE ",
+		" PRINT "," PLOT "," RUN "," SAVE ",
+		" RAND ",
+/* 250-255 */ " IF "," CLS"," UNPLOT "," CLEAR"," RETURN"," COPY"
+};
+
 void cleanup ()
 {
     if (outroot)
@@ -365,6 +443,29 @@ void romStoreAddr (int i, ADDR addr)
     rom[i+1] = h;
 }
 
+
+void printLine (FILE* f, int lineAddr, int lineNum)
+{
+    int x = lineAddr - 16509;
+    int len = buff[x+2] + 256 * buff[x+3];
+    int end = x + 4 + len; 
+    int c;
+    fprintf(f, "%4d", lineNum);
+    for (x += 4; x < end; x++)
+        {
+        c = buff[x];
+        if (c == 0x7E) /* Number */
+            {
+            x += 5;
+            }
+        else if (c == 0x76) /* Newline */
+            fprintf(f,"\n");
+        else
+            {
+            fprintf(f,"%s", tokens[c]);
+            }
+        }
+}
 
 int main (int argc, char *argv[])
 {
@@ -734,6 +835,8 @@ int main (int argc, char *argv[])
     else
         {
         fprintf(stderr, "Autorun line = %d\n", autoline);
+        /* Print the autorun line */
+        printLine(stderr, autoaddr, autoline);
         if (autorun_error == 1)
             {
             fprintf(stderr,"Warning: There were possible issues with autorun. You can use the '-a' option\n");
