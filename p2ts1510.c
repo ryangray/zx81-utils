@@ -41,15 +41,16 @@
 
 #define VERSION "1.0.1"
 
-#define romSize 8192       /* 8K buffer for making the ROMs, even if a 16K one */
-#define dataOffset  0x0100 /* Where data starts in the first ROM */
-#define romReserved 0x2000 /* Where reserved bytes at end of 1st ROM start */
+#define ROM8K 8192        /* 8K buffer for making the ROM images */
+#define dataOffset 0x0100 /* Where data starts in the first ROM  */
 
-typedef unsigned char BYTE;
-typedef unsigned short int ADDR;
+/* Define byte and 16-bit address to avoid problems with int on DOS builds */
+typedef unsigned char       BYTE;   /* For bytes, unsigned 8-bit */
+typedef unsigned short int  ADDR;   /* For addresses, unsigned 16-bit */
+typedef short int           ROMP;   /* For a rom[] or buff[] pointer or offset, signed 16-bit */
 
 ADDR prog_size = 0;
-ADDR const sizeLimit = romReserved - dataOffset; /* Space in ROM A for data */
+ADDR const sizeLimit = ROM8K - dataOffset; /* Space in ROM A for data */
 char *infile = "";
 char *outfile = "";
 char *outfile_malloc = NULL;
@@ -60,9 +61,9 @@ int includeVars = 1; /* Some programs need vars, so we default to include */
 int autorun = 10000; /* 10000=Use the setting in the P file, <0=disable, >=0=set*/
 int shortRomFile = 0;
 int oneRom = 1;
-int thisRomSize = 0;
-int prevRomSize = 0; /* Length of ROM written so far */
 int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
+ADDR thisRomSize = 0;
+ADDR prevRomSize = 0; /* Length of ROM written so far */
 
 /* Memory map:
  *
@@ -90,6 +91,7 @@ int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
 #define AUTOAD 0xFC /* Auto start line address (need to figure) */
 #define PROG1S 0xFE /* Source address of program block 1 */
 
+/* Some of the system variable addresses */
 #define RAMTOP  16388 /* 0x4004 */
 #define PPC     16391 /* 0x4007 */
 #define SYSSAVE 16393 /* 0x4009 */
@@ -102,7 +104,7 @@ int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
 #define NXTLIN  16425 /* 0x4029 */
 #define CDFLAG  16443 /* 0x403B */
 
-BYTE rom[romSize];
+BYTE rom[ROM8K];
 BYTE buff[16384];
 BYTE sys[116];
 
@@ -382,12 +384,12 @@ int findFileExtension (char *str)
 
 void writeROM(FILE *out, int endRom)
 {
-    int f, len;
+    ROMP f, len;
 
     if (shortRomFile)
         len = thisRomSize;
     else
-        len = romSize;
+        len = ROM8K;
     if (endRom)
         {
         fprintf(stderr, "ROM : %s\nSize: %d bytes", outname, prevRomSize + len);
@@ -404,13 +406,13 @@ void writeROM(FILE *out, int endRom)
 }
 
 
-int findLine (int l)
+ROMP findLine (ROMP l)
 {
     /* Search rom for the offset of a given line number l */
     /* Returns -1 if line l is not found */
 
-    int ithis = 0, thisline = 256 * buff[0] + buff[1];
-    int inext = 4 + buff[2] + 256 * buff[3];
+    ROMP ithis = 0, thisline = 256 * buff[0] + buff[1];
+    ROMP inext = 4 + buff[2] + 256 * buff[3];
 
     while (l > thisline && inext < prog_size)  {
         ithis = inext;
@@ -436,7 +438,7 @@ ADDR sysAddr (ADDR addr)
 }
 
 
-void romStoreAddr (int i, ADDR addr)
+void romStoreAddr (ROMP i, ADDR addr)
 {
     BYTE h = addr / 256;
     rom[i] = addr - h * 256;
@@ -444,13 +446,13 @@ void romStoreAddr (int i, ADDR addr)
 }
 
 
-void printLine (FILE* f, int lineAddr, int lineNum)
+void printLine (FILE* f, ADDR lineAddr, int lineNum)
 {
-    int x = lineAddr - 16509;
-    int len = buff[x+2] + 256 * buff[x+3];
-    int end = x + 4 + len; 
-    int c;
-    fprintf(f, "%4d", lineNum);
+    ROMP x = lineAddr - 16509;
+    ROMP len = buff[x+2] + 256 * buff[x+3];
+    ROMP end = x + 4 + len; 
+    BYTE c;
+    fprintf(f, "  %4d", lineNum);
     for (x += 4; x < end; x++)
         {
         c = buff[x];
@@ -553,7 +555,7 @@ int main (int argc, char *argv[])
         }
 
     /* Copy the loader to the ROM image */
-    memset(rom, 0xFF, romSize);
+    memset(rom, 0xFF, ROM8K);
     memcpy(rom, ldr, ldr_size);
 
     /* Load the .P file system vars to get the program size */
@@ -597,9 +599,13 @@ int main (int argc, char *argv[])
     /* Copy NXTLIN to ROM */
     rom[AUTOAD]   = sysByte(NXTLIN);
     rom[AUTOAD+1] = sysByte(NXTLIN+1);
-
+    /* Copy CDFLAG to ROM */
     rom[PCDFLAG] = sysByte(CDFLAG);
-    fprintf(stderr, "CDFLAG = %02x\n", rom[PCDFLAG]);
+    fprintf(stderr, "CDFLAG = %02x, ", rom[PCDFLAG]);
+    if (rom[PCDFLAG] & 0x40)
+        fprintf(stderr,"SLOW mode\n");
+    else
+        fprintf(stderr,"FAST mode\n");
 
     /* Work out program and variable blocks for storing in ROM */
 
@@ -616,7 +622,7 @@ int main (int argc, char *argv[])
         /* Vars are not split but are on ROM B */
         if (includeVars)
             {
-            if (prog2len + vars_size > romSize)
+            if (prog2len + vars_size > ROM8K)
                 {
                 fprintf(stderr, "Error: Program + variables size is larger than two 8K ROMs.\n");
                 exit(EXIT_FAILURE);
@@ -626,7 +632,7 @@ int main (int argc, char *argv[])
             vars1offs = prog2offs + prog2len;
             vars1addr = prog2addr + prog2len;
             }
-        else if (prog2len > romSize)
+        else if (prog2len > ROM8K)
             {
             fprintf(stderr, "Error: Program size is larger than two 8K ROMs.\n");
             exit(EXIT_FAILURE);
@@ -651,7 +657,7 @@ int main (int argc, char *argv[])
                 vars1offs = prog1offs + prog_size;
                 vars1addr = prog1addr + prog_size;
                 vars2addr = ORGB;
-                if (vars2len > romSize)
+                if (vars2len > ROM8K)
                     {
                     fprintf(stderr, "Error: Program + variables size is larger than two 8K ROMs.\n");
                     exit(EXIT_FAILURE);
@@ -871,7 +877,7 @@ int main (int argc, char *argv[])
         writeROM(out, !oneRom);
         if (oneRom)
             {
-            prevRomSize += romSize;
+            prevRomSize += ROM8K;
             }
         else
             {
@@ -895,7 +901,7 @@ int main (int argc, char *argv[])
                 }
             }
         /* Write prog 2 block to rom */
-        memset(rom, 0xFF, romSize);
+        memset(rom, 0xFF, ROM8K);
         memcpy(rom, buff + prog1len, prog2len);
         thisRomSize = prog2len;
         }
@@ -917,7 +923,7 @@ int main (int argc, char *argv[])
             writeROM(out, !oneRom);
             if (oneRom)
                 {
-                prevRomSize += romSize;
+                prevRomSize += ROM8K;
                 }
             else
                 {
@@ -945,7 +951,7 @@ int main (int argc, char *argv[])
                     }
                 }
             /* Write vars 2 block to rom */
-            memset(rom, 0xFF, romSize);
+            memset(rom, 0xFF, ROM8K);
             memcpy(rom, buff + vars1len, vars2len);
             thisRomSize = vars2len;
             }
