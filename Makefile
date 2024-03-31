@@ -101,6 +101,8 @@ p2ts1510: p2ts1510.o
 
 p2ts1510-loader: p2ts1510_loader.bin
 
+p2ts1510-loaderP: p2ts1510_loaderP.bin
+
 .PHONY: clean
 
 clean:

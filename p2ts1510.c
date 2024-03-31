@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "1.0.1"
+#define VERSION "1.0.2"
 
 #define ROM8K 8192        /* 8K buffer for making the ROM images */
 #define dataOffset 0x0100 /* Where data starts in the first ROM  */
@@ -50,6 +50,7 @@ typedef unsigned short int  ADDR;   /* For addresses, unsigned 16-bit */
 typedef short int           ROMP;   /* For a rom[] or buff[] pointer or offset, signed 16-bit */
 
 ADDR prog_size = 0;
+ADDR pfile_size = 0;
 ADDR const sizeLimit = ROM8K - dataOffset; /* Space in ROM A for data */
 char *infile = "";
 char *outfile = "";
@@ -62,6 +63,7 @@ int autorun = 10000; /* 10000=Use the setting in the P file, <0=disable, >=0=set
 int shortRomFile = 0;
 int oneRom = 1;
 int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
+int tapeLikeLoader = 0; /* Load every byte of the P file like loading from tape */
 ADDR thisRomSize = 0;
 ADDR prevRomSize = 0; /* Length of ROM written so far */
 
@@ -94,7 +96,9 @@ ADDR prevRomSize = 0; /* Length of ROM written so far */
 /* Some of the system variable addresses */
 #define RAMTOP  16388 /* 0x4004 */
 #define PPC     16391 /* 0x4007 */
+/* ^--Not SAVEd,  v---SAVEd in P file */
 #define SYSSAVE 16393 /* 0x4009 */
+#define VERSN   16393 /* 0x4009 */
 #define D_FILE  16396 /* 0x400C */
 #define VARS    16400 /* 0x4010 */
 #define E_LINE  16404 /* 0x4014 */
@@ -102,6 +106,7 @@ ADDR prevRomSize = 0; /* Length of ROM written so far */
 #define STKBOT  16410 /* 0x401A */
 #define STKEND  16412 /* 0x401C */
 #define NXTLIN  16425 /* 0x4029 */
+#define OLDPPC  16427 /* 0x402B */
 #define CDFLAG  16443 /* 0x403B */
 
 BYTE rom[ROM8K];
@@ -161,10 +166,10 @@ BYTE ldr[] = {
     0x23,                   /* inc hl */
     0x10, 0xfc,             /* djnz -4 */
     0x22, 0x10, 0x40,       /* ld (VARS),hl     Point VARS to just after display file */
-    0xcd, 0x9a, 0x14,       /* call 0x149a  Do these init vars? */
-    0xcd, 0xad, 0x14,       /* call 0x14ad  My guess is expand DFILE, which will move  */
-    0xcd, 0x07, 0x02,       /* call 0x0207  VARS up afterward. */
-    0xcd, 0x2a, 0x0a,       /* call 0x0a2a  There is supposed to be a 0x80 byte after variables, then E_LINE */
+    0xcd, 0x9a, 0x14,       /* call 0x149a  CLEAR: clears the variable area (sets hl and E_LINE) */
+    0xcd, 0xad, 0x14,       /* call 0x14ad  CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl) */
+    0xcd, 0x07, 0x02,       /* call 0x0207  SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b) */
+    0xcd, 0x2a, 0x0a,       /* call 0x0a2a  CLS: will expand a collapsed display file if enough RAM (uses bc, a, hl, de) */
     0xed, 0x4b, 0xf0, 0x20, /* ld bc,(ORGA+VARS1L) Get variables block 1 length */
     /* If bc==0, no vars block, so skip vars loading */
     0x78,                   /* ld a,b */
@@ -207,6 +212,34 @@ BYTE ldr[] = {
 };
 
 ADDR ldr_size = sizeof(ldr); /* Currently $00b5 */
+
+BYTE ldrp[] = {
+    0x01, 0x00, 0x00,       /* ld bc, $0000 (So byte 0 contains 0x01) */
+    0xd3, 0xfd,             /* out (0fdh),a */
+    0xf3,                   /* di */
+    /* Other setup */
+    0x3e, 0x1e,             /* ld a,0x1e */
+    0xed, 0x47,             /* ld i,a */
+    0xed, 0x56,             /* im 1 */
+    0x2a, 0xfe, 0x20,       /* ld hl,(ORGA+PROG1S)   Get block source from rom */
+    0x11, 0x09, 0x40,       /* ld de,0x4009     Set block destination to start of saved system variables (16393) */
+    0xed, 0x4b, 0xfa, 0x20, /* ld bc,(ORGA+PROG1L)   Get length of block to copy */
+    0xed, 0xb0,             /* ldir             Copy first program block */
+    /* Check for second prog block to copy and copy it */
+    0xed, 0x4b, 0xf4, 0x20, /* ld bc,(ORGA+PROG2L)  Load bc with length of 2nd program block */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x05,             /* jr z, +5         Skip copy for bc==0 */
+    0x2a, 0xf6, 0x20,       /* ld hl,(ORGA+PROG2S) */
+    0xed, 0xb0,             /* ldir             Copy program block 2 */
+    0xcd, 0xad, 0x14,       /* call 0x14ad  CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl) */
+    0xcd, 0x07, 0x02,       /* call 0x0207  SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b) */
+    /* Start BASIC interpreter */
+    0x2a, 0x29, 0x40,       /* ld hl,(NXTLIN)   Address of next line to interpret */
+    0xc3, 0x6c, 0x06        /* jp 0x066c        This sets NXTLIN to hl */
+};
+
+ADDR ldrp_size = sizeof(ldrp); /* Currently 0x2B */
 
 #define NAK "#"
 /* Define character strings for DOS Code Page 437 */
@@ -309,6 +342,7 @@ void printUsage ()
     printf("  -1          Output only a single ROM file (the default).\n");
     printf("  -2          Output separate (two or more) ROM files.\n");
     printf("  -i          Print the P file and block info but don't output the ROMs.\n");
+    printf("  -t          Use tape-like loader: sys vars, program, display, and variables.\n");
     printf("  -?          Print this help.\n");
     printf("The default output file name is taken from the input file name.\n");
     printf("The input can be standard input or you can give '-' as the file name.\n");
@@ -351,6 +385,9 @@ void parseOptions (int argc, char *argv[])
                 break;
             case 'i':
                 infoOnly = 1;
+                break;
+            case 't':
+                tapeLikeLoader = 1;
                 break;
             case '?':
                 printUsage();
@@ -408,8 +445,8 @@ void writeROM(FILE *out, int endRom)
 
 ROMP findLine (ROMP l)
 {
-    /* Search rom for the offset of a given line number l */
-    /* Returns -1 if line l is not found */
+    /* Search rom for the offset of a given line number l or the next line after */
+    /* Returns -1 if line is greater than the last line */
 
     ROMP ithis = 0, thisline = 256 * buff[0] + buff[1];
     ROMP inext = 4 + buff[2] + 256 * buff[3];
@@ -446,16 +483,42 @@ void romStoreAddr (ROMP i, ADDR addr)
 }
 
 
-void printLine (FILE* f, ADDR lineAddr, int lineNum)
+void printLine (FILE* f, ADDR lineAddr)
 {
-    ROMP x = lineAddr - 16509;
-    ROMP len = buff[x+2] + 256 * buff[x+3];
-    ROMP end = x + 4 + len; 
+    ROMP x;
+    BYTE *b;
+    ROMP len;
+    ROMP end;
     BYTE c;
-    fprintf(f, "  %4d", lineNum);
+
+    if (lineAddr < SYSSAVE || lineAddr > 16509 + pfile_size)
+        {
+        return;
+        }
+    else if (!tapeLikeLoader && lineAddr >= 16509 + prog_size)
+        {
+        /* For now, we can't print since those P file bytes haven't been loaded
+        */
+        return;
+        }
+    else if (lineAddr < 16509)
+        {
+        x = lineAddr - SYSSAVE;
+        b = sys;
+        }
+    else
+        {
+        x = lineAddr - 16509;
+        b = buff;
+        }
+    len = b[x+2] + 256 * b[x+3];
+    len = len < 256 ? len : 256; /* Limit length */
+    end = x + 4 + len;
+    fprintf(f, "Autorun line code:\n");
+    fprintf(f, "  %4d", 256 * b[x] + b[x+1]); /* Line number */
     for (x += 4; x < end; x++)
         {
-        c = buff[x];
+        c = b[x];
         if (c == 0x7E) /* Number */
             {
             x += 5;
@@ -467,12 +530,15 @@ void printLine (FILE* f, ADDR lineAddr, int lineNum)
             fprintf(f,"%s", tokens[c]);
             }
         }
+    if (c != 0x76)
+        fprintf(f, "\n");
 }
 
 int main (int argc, char *argv[])
 {
     FILE *in = NULL, *out = NULL;
     int f, b1, b2, c;
+    BYTE cdflag;
     ADDR dfile, dfile_size;
     ADDR vars, vars_size;
     ADDR eline, ch_add, nxtlin;
@@ -489,7 +555,8 @@ int main (int argc, char *argv[])
     ADDR vars2len = 0;
     ADDR prog2offs = 0;
     char R[] = "_A";
-    int autorun_error = 0;
+    int autorun_warn = 0;
+    int autorun_check = 0;
 
     parseOptions(argc, argv);
  
@@ -556,7 +623,10 @@ int main (int argc, char *argv[])
 
     /* Copy the loader to the ROM image */
     memset(rom, 0xFF, ROM8K);
-    memcpy(rom, ldr, ldr_size);
+    if (tapeLikeLoader)
+        memcpy(rom, ldrp, ldrp_size);
+    else
+        memcpy(rom, ldr, ldr_size);
 
     /* Load the .P file system vars to get the program size */
 
@@ -577,12 +647,20 @@ int main (int argc, char *argv[])
     vars = sysAddr(VARS);
     dfile_size = vars - dfile;
     fprintf(stderr, "%5d: D_FILE, %d bytes\n", dfile, dfile_size);
+    /* Display file starts with a newline 0x76 and then has 24 newlines after 
+    that for a collapsed file or 24 full lines of 32 spaces plus a newline for
+    1+24*33 = 793 bytes. */
 
     eline = sysAddr(E_LINE);
-    vars_size = eline - vars - 1;
+    vars_size = eline - vars - 1; /* Don't count the 0x80 byte at E_LINE-1 */
     fprintf(stderr, "%5d: VARS, %d bytes\n", vars, vars_size);
     fprintf(stderr, "%5d: E_LINE\n", eline);
 
+    pfile_size = eline - SYSSAVE;
+    /* pfile_size = 116 + prog_size + dfile_size + vars_size + 1;
+       There is supposed to be a 0x80 byte after variables, then E_LINE
+       The P file may include bytes after the 0x80
+    */
     ch_add = sysAddr(CH_ADD);
     fprintf(stderr, "CH_ADD = %d\n", ch_add);
 
@@ -596,13 +674,9 @@ int main (int argc, char *argv[])
     fprintf(stderr, "NXTLIN = %d\n", nxtlin);
     /* Set as default unless -a option overrides */
     autoaddr = nxtlin;
-    /* Copy NXTLIN to ROM */
-    rom[AUTOAD]   = sysByte(NXTLIN);
-    rom[AUTOAD+1] = sysByte(NXTLIN+1);
-    /* Copy CDFLAG to ROM */
-    rom[PCDFLAG] = sysByte(CDFLAG);
-    fprintf(stderr, "CDFLAG = %02x, ", rom[PCDFLAG]);
-    if (rom[PCDFLAG] & 0x40)
+    cdflag = sysByte(CDFLAG);
+    fprintf(stderr, "CDFLAG = %02x, ", cdflag);
+    if (cdflag & 0x40)
         fprintf(stderr,"SLOW mode\n");
     else
         fprintf(stderr,"FAST mode\n");
@@ -612,7 +686,36 @@ int main (int argc, char *argv[])
     prog1offs = dataOffset;
     prog1addr = ORGA + dataOffset;
 
-    if (prog_size > sizeLimit)
+    if (tapeLikeLoader)
+        {
+        /* Put whole P file in ROM and the loader loads it all. 
+         * The whole thing will be in prog1 and (possibly) prog2 blocks.
+         * We still load the system variables in sys[], so we need to copy those
+         * to the rom image.
+         */
+        includeVars = 0; /* Everything is included in the program block(s) */
+        if (pfile_size > sizeLimit)
+            {
+            /* P file is split across ROMs */
+            prog1len = sizeLimit;
+            prog2len  = pfile_size - prog1len;
+            prog2addr = ORGB; /* 2nd part starts on ROM B */
+            prog2offs = 0;
+            if (prog2len > ROM8K)
+                {
+                fprintf(stderr, "Error: P file size is larger than two 8K ROMs.\n");
+                exit(EXIT_FAILURE);
+                }
+            if (!oneRom)
+                strcat(outroot, R);
+            }
+        else /* Fits in the one ROM */
+            {
+            prog1len  = pfile_size;
+            prog2len  = 0;
+            }
+        }
+    else if (prog_size > sizeLimit)
         {
         /* Program is split */
         prog1len  = sizeLimit;
@@ -678,16 +781,24 @@ int main (int argc, char *argv[])
 
     /* Set block info in ROM */
 
-    romStoreAddr(VARS2L, vars2len);     /* Length  of 2nd variables block */
-    romStoreAddr(VARS2S, vars2addr);    /* Address of 2nd variables block */
-    romStoreAddr(VARS1L, vars1len);     /* Length  of 1st variables block */
-    romStoreAddr(VARS1S, vars1addr);    /* Address of 1st variables block */
+    if (tapeLikeLoader)
+        {
+        fprintf(stderr," 8192: Tape-like loader in ROM, %d bytes\n", dataOffset);
+        }
+    else
+        {
+        rom[PCDFLAG] = cdflag;
+        romStoreAddr(AUTOAD, nxtlin);   /* Auto start address */
+        romStoreAddr(VARS2L, vars2len);     /* Length  of 2nd variables block */
+        romStoreAddr(VARS2S, vars2addr);    /* Address of 2nd variables block */
+        romStoreAddr(VARS1L, vars1len);     /* Length  of 1st variables block */
+        romStoreAddr(VARS1S, vars1addr);    /* Address of 1st variables block */
+        fprintf(stderr," 8192: Segment loader in ROM, %d bytes\n", dataOffset);
+        }
     romStoreAddr(PROG2L, prog2len);     /* Length  of 2nd program block */
     romStoreAddr(PROG2S, prog2addr);    /* Address of 2nd program block */
     romStoreAddr(PROG1L, prog1len);     /* Length  of 1st program block */
     romStoreAddr(PROG1S, prog1addr);    /* Address of 1st program block */
-
-    fprintf(stderr," 8192: ROM loader in ROM, 256 bytes\n");
 
     if (prog2len)
         {
@@ -708,9 +819,27 @@ int main (int argc, char *argv[])
             fprintf(stderr, "%5d: Variables in ROM, %d bytes\n", vars1addr, vars1len);
         }
 
-    /* Read program into buffer */
-    for (f = 0; f < prog_size; f++)
-        buff[f] = fgetc(in);
+    /* * * * The problem here is that if we don't load the rest of the P file,
+             we can't properly do the autorun line checks unless we just say
+             that autorun line is needs the variables or dfile.
+
+             What I will do is to load the whole P file into buff and have
+             pointers sys, prg, dsp, and var to point to offsets in it for
+             convenience. Then we can look ahead to the vars area even in not
+             using the tape loader. It should also make the code a bit simpler.
+    */
+    if (tapeLikeLoader)
+        {
+        /* Read rest of the P file into buffer */
+        for (f = 0; f < pfile_size - 116; f++)
+            buff[f] = fgetc(in);
+        }
+    else
+        {
+        /* Read just the program into buffer */
+        for (f = 0; f < prog_size; f++)
+            buff[f] = fgetc(in);
+        }
 
     /* Sort out the autorun address and line number */
 
@@ -721,21 +850,23 @@ int main (int argc, char *argv[])
         b2 = 255;
         /* Not sure yet if this address matters in this case, but it works */
         autoaddr = vars;
+        autoline = -1;
         }
     else if (0 <= autorun && autorun < 10000) /* Autorun line set by '-a' option */
         {
         /* f points to the autorun line or the next line */
         f = findLine(autorun);
-        if (f < 0)
-            {
-            fprintf(stderr,"Autorun line %d not found.\n", autorun);
-            exit(EXIT_FAILURE);
-            }
         /* Overwrite address from P file */
         autoaddr = 16509 + f;
         /* Get actual line number bytes */
         b1 = buff[f];
         b2 = buff[f+1];
+        autoline = b1 * 256 + b2;
+        if (autoline != autorun)
+            {
+            fprintf(stderr,"Autorun line %d not found, using the next line: %d\n", autorun, autoline);
+            }
+        autorun_check = 1;
         }
     else if (autoaddr == dfile)
         {
@@ -748,17 +879,48 @@ int main (int argc, char *argv[])
         /* Get actual line number bytes */
         b1 = buff[f];
         b2 = buff[f+1];
-        fprintf(stderr,"Autorun address is D_FILE, setting to last line.\n");
-        autorun_error = 1;
+        fprintf(stderr,"Warning: Autorun address is D_FILE, setting to last line.\n");
+        autorun_warn = 1;
+        autorun_check = 1;
+        autoline = b1 * 256 + b2;
         }
-    else if (autoaddr < 16509 || autoaddr > dfile) /* The autorun address is not valid */
+    else if (autoaddr < 16384)
         {
-        /* Set no autorun */
-        b1 = 254;
-        b2 = 255;
-        autoaddr = b1 + 256 * b2;
-        fprintf(stderr,"Autorun address (%d) is not valid, setting no autorun.\n", autoaddr);
-        autoaddr = vars;
+        fprintf(stderr,"Warning: Autorun address (%d) is in the ROM area, autorun may fail.\n", autoaddr);
+        /* We don't have the bytes to load for the line number to later load
+        into PPC, so we set them to 0 */
+        b1 = 0;
+        b2 = 0;
+        autorun_warn = 1;
+        autoline = -1;
+        }
+    else if (autoaddr < 16509)
+        {
+        fprintf(stderr,"Warning: Autorun address (%d) is in the system area, autorun may fail.\n", autoaddr);
+        if (!tapeLikeLoader)
+            {
+            fprintf(stderr,"Warning: You will need to use the -t option to include the system variables.\n");
+            }
+        b1 = sys[autoaddr-SYSSAVE];
+        b2 = sys[autoaddr-SYSSAVE+1];
+        autoline = b1 * 256 + b2;
+        f = autoaddr - 16509;
+        autorun_warn = 1;
+        autorun_check = 1;
+        }
+    else if (autoaddr > dfile) /* The autorun address is not valid */
+        {
+        /* But some things put one in the variables area */
+        fprintf(stderr,"Warning: Autorun address (%d) is not within the BASIC program, autorun may fail.\n", autoaddr);
+        autorun_warn = 1;
+        autorun_check = 1;
+        f = autoaddr - 16509;
+        /* Get actual line number bytes */
+        b1 = buff[f];
+        b2 = buff[f+1];
+        autoline = b1 + 256 * b2;
+        if (f < pfile_size && !tapeLikeLoader && !includeVars)
+            fprintf(stderr,"Warning: You will need to use the -t option or not use -v to include variables.\n");
         }
     else /* Use valid autorun from P file */
         {
@@ -766,39 +928,34 @@ int main (int argc, char *argv[])
         /* Get actual line number bytes */
         b1 = buff[f];
         b2 = buff[f+1];
+        autoline = b1 + 256 * b2;
         }
 
-    autoline = b1 * 256 + b2;
+    /* At this point, autorun==line user requested or one from the P file, and
+    autoline==the actual line number or -1 for no autorun or no line number */
 
-    if (b1 != 254 || b2 != 255) /* Autorun is set */
+    if (autorun_check)
         {
         /* Do some sanity checks as some P files have issues */
         if (autoline > 9999)
             {
-            fprintf(stderr,"Warning: autorun line %d is out of range.\n", autoline);
-            autorun_error = 1;
+            fprintf(stderr,"Warning: autorun line number %d is out of range.\n", autoline);
+            autorun_warn = 1;
             }
-        c = findLine(autoline);
-        if (c < 0)
+        if (f < 0 || f > prog_size)
             {
-            fprintf(stderr,"Warning: autorun line %d was not found.\n", autoline);
-            autorun_error = 1;
+            /* Outside the BASIC program */
             }
-        else if (c != f)
-            {
-            fprintf(stderr,"Warning: autorun line %d was not found at autorun address.\n", autoline);
-            autorun_error = 1;
-            }
-        if (f == 0)
+        else if (f == 0)
             {
             fprintf(stderr,"Warning: autorun line is the first line. This is usually not possible.\n");
-            autorun_error = 1;
+            autorun_warn = 1;
             }
         else if (buff[f-1] != 0x76)
             {
             fprintf(stderr,"Warning: Autorun address may be bad or P file corrupt.\n");
             fprintf(stderr,"         Byte before this address should be a newline.\n");
-            autorun_error = 1;
+            autorun_warn = 1;
             }
         else
             {
@@ -810,7 +967,7 @@ int main (int argc, char *argv[])
             if (buff[c] != 0xF8)
                 {
                 fprintf(stderr,"Warning: Line before autorun line is not a SAVE command.\n");
-                autorun_error = 1;
+                autorun_warn = 1;
                 }
             else
                 {
@@ -818,20 +975,23 @@ int main (int argc, char *argv[])
                 if (buff[f-2] == 11 && buff[f-3] < 128)
                     {
                     fprintf(stderr,"Warning: Filename of SAVE before autorun line doesn't end with an inverse char.\n");
-                    autorun_error = 1;
+                    autorun_warn = 1;
                     }
                 }
             }
         }
 
-    rom[AUTOLN]   = b1;
-    rom[AUTOLN+1] = b2;
-    romStoreAddr(AUTOAD, autoaddr);
+    if (!tapeLikeLoader)
+        {
+        rom[AUTOLN]   = b1;
+        rom[AUTOLN+1] = b2;
+        romStoreAddr(AUTOAD, autoaddr);
+        }
     fprintf(stderr, "Autorun addr = %d\n", autoaddr);
     if (b1 == 254 && b2 == 255)
         {
         fprintf(stderr, "No Autorun\n");
-        if (autorun_error == 1)
+        if (autorun_warn == 1)
             {
             fprintf(stderr,"Warning: There were possible issues with autorun. You can check the code for\n");
             fprintf(stderr,"what line it should be and use the '-a' option to set the correct start line.\n");
@@ -841,9 +1001,9 @@ int main (int argc, char *argv[])
     else
         {
         fprintf(stderr, "Autorun line = %d\n", autoline);
-        /* Print the autorun line */
-        printLine(stderr, autoaddr, autoline);
-        if (autorun_error == 1)
+        /* Print the line that will be autorun */
+        printLine(stderr, autoaddr);
+        if (autorun_warn == 1)
             {
             fprintf(stderr,"Warning: There were possible issues with autorun. You can use the '-a' option\n");
             fprintf(stderr,"with -1 as the line number to disable and check the code for the correct line.\n");
@@ -867,8 +1027,18 @@ int main (int argc, char *argv[])
             }
         }
 
-    /* Copy program block 1 to rom */
-    memcpy(rom + dataOffset, buff, prog1len);
+    if (tapeLikeLoader)
+        {
+        /* Copy system vars to rom */
+        memcpy(rom + dataOffset, sys, 116);
+        /* Copy rest of block 1 to rom */
+        memcpy(rom + dataOffset + 116, buff, prog1len - 116);
+        }
+    else
+        {
+        /* Copy program block 1 to rom */
+        memcpy(rom + dataOffset, buff, prog1len);
+        }
     thisRomSize = dataOffset + prog1len;
 
     if (prog2len > 0)
@@ -902,7 +1072,10 @@ int main (int argc, char *argv[])
             }
         /* Write prog 2 block to rom */
         memset(rom, 0xFF, ROM8K);
-        memcpy(rom, buff + prog1len, prog2len);
+        if (tapeLikeLoader)
+            memcpy(rom, buff + prog1len - 116, prog2len);
+        else
+            memcpy(rom, buff + prog1len, prog2len);
         thisRomSize = prog2len;
         }
     

@@ -1,3 +1,7 @@
+2024-03-30 ryangray
+    * Added a tape-like loader option to include system varaibles and display file
+    * Improved autorun to handle more cases and show the BASIC line
+
 2024-03-23 ryangray
     * Tighten up some of the variable data types
     * Add printing if set to FAST or SLOW mode for CDFLAG in info block
