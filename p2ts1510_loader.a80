@@ -23,6 +23,7 @@ E_LINE: equ $4014
 CH_ADD: equ $4016
 STKEND: equ $4022
 NXTLIN: equ $4029
+OLDPPC: equ $402B
 CDFLAG: equ $403b
 LINE1:  equ $407d
 

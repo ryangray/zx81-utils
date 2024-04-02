@@ -929,6 +929,7 @@ int main (int argc, char *argv[])
         b1 = buff[f];
         b2 = buff[f+1];
         autoline = b1 + 256 * b2;
+        autorun_check = 1;
         }
 
     /* At this point, autorun==line user requested or one from the P file, and
