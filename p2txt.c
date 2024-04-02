@@ -9,12 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NAK "#"
+#define VERSION "1.0.2"
+
 #define QUOTE_code 11
 #define NUM_code 126
 #define REM_code 234
-#define NAK2 "!"
-#define VERSION "1.0.2"
 
 unsigned char linebuf[32768]; /* BIG buffer for those lovely m/c REMs */
 char *infile;
@@ -23,7 +22,18 @@ enum outstyle style = OUT_READABLE;
 int inFirstLineREM; /* 1=First line is a REM and we are on the first line */
 int onlyFirstLineREM = 0; /* 1=Only preserve codes in a first line REM, 0=Preserve codes everywhere */
 
-/************** the zx81 char set as transposed to ascii ***************/
+/* Character mapping ZX81 character set to ASCII
+ *
+ * We have 3 different mappings for optional output styles: readable, Zmakebas,
+ * and ZXText2P
+ */
+
+/* Definitions for a "readable" character mapping in charset_read that uses
+   Unicode characters when possible (upper ASCII for DOS) and square-bracketed
+   letters for inverse characters.
+*/
+
+#define NAK "#" /* Not A Kharacter */
 
 /* Define character strings for DOS Code Page 437 */
 #ifdef __MSDOS__
@@ -102,6 +112,12 @@ char *charset_read[] =
 /* 250-255 */ " IF "," CLS"," UNPLOT "," CLEAR"," RETURN"," COPY"
 };
 
+/* Definitions for a character mapping compatible with Zmakebas in charset_zmb 
+   that uses the escape sequences that zmakebas uses for non-ASCII characters
+   and lowercase letters for inverse letters with a backslash before other
+   inverse characters.
+*/
+
 /* Block Graphics escapes used by Zmakebas and listbasic:
  * 
  * "\' "  001 Top-left corner
@@ -172,6 +188,13 @@ char *charset_zmb[] =
 /* 250-255 */ " IF "," CLS"," UNPLOT "," CLEAR"," RETURN"," COPY"
 };
 
+/* Definitions for a character mapping compatible with the ZXText2P utility in 
+   charset_zxtext2p that uses the escape sequences that ZXText2P uses for non-
+   ASCII characters and a percent sign before inverse characters.
+*/
+
+#define NAK2 "!" /* Not A Kharacter for ZXText2P */
+
 char *charset_zxtext2p[] =
 {
 /* 000-009 */ " ","\\' ","\\ '","\\''","\\. ","\\: ","\\.'","\\:'","\\##","\\,,",
@@ -208,35 +231,35 @@ char *charset_zxtext2p[] =
 /* 250-255 */ " IF "," CLS"," UNPLOT "," CLEAR"," RETURN"," COPY"
 };
 
+
 char **charset = charset_read;
 
-/************************* program starts here ****************************/
-
-
 /* get a single ZX81 program line & line number & length */
-void zxgetline(FILE *in,int *linenum,int *linelen,int *t)
+
+void zxgetline(FILE *in, int *linenum, int *linelen, int *t)
 {
-int b1,b2,f;
+int b1, b2, f;
 
-b1=fgetc(in);
-b2=fgetc(in);
-*linenum=b1*256+b2;
-(*t)-=2;
+b1 = fgetc(in);
+b2 = fgetc(in);
+*linenum = b1 * 256 + b2;
+(*t) -= 2;
 
-b1=fgetc(in);
-b2=fgetc(in);
-*linelen=b1+256*b2;
-(*t)-=2;
+b1 = fgetc(in);
+b2 = fgetc(in);
+*linelen = b1 + 256 * b2;
+(*t) -= 2;
 
-for(f=0;f<*linelen;f++)
+for (f = 0; f < *linelen; f++)
   {
-  linebuf[f]=fgetc(in);
+  linebuf[f] = fgetc(in);
   (*t)--;
   }
 }
 
 
 /* translate line into keywords using the charset array */
+
 void xlatline(int linelen)
 {
 int f, inQuotes = 0;
@@ -276,6 +299,7 @@ printf("\n");
 
 
 /* process (opened) .P file to stdout */
+
 void thrashfile (FILE *in)
 {
 int b1, b2;
@@ -296,10 +320,10 @@ inFirstLineREM = (linebuf[0] == REM_code);
 
 while (total >= 0)
     {
-    printf("%4d",linenum);
+    printf("%4d", linenum);
     xlatline(linelen);
     inFirstLineREM = 0;
-    zxgetline(in,&linenum,&linelen,&total);
+    zxgetline(in, &linenum, &linelen, &total);
     }
 }
 
@@ -368,7 +392,7 @@ void parse_options(int argc, char *argv[])
 }
 
 
-int main(int argc,char *argv[])
+int main(int argc, char *argv[])
 {
 FILE *in;
 
