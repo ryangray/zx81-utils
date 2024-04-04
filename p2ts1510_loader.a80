@@ -25,22 +25,19 @@ STKEND: equ $4022
 NXTLIN: equ $4029
 OLDPPC: equ $402B
 CDFLAG: equ $403b
-LINE1:  equ $407d
+PROG:   equ $407d
 
 NEWLINE: equ $76
 
-; ROM Data block variables
-PCDFLAG: equ $EB    ; Value for CDFLAG
-VARS2L: equ $EC     ; 2nd VARS block length
-VARS2S: equ $EE     ; 2nd VARS block source address
-VARS1L: equ $F0     ; 1st VARS block length
-VARS1S: equ $F2     ; 1st VARS block source address
-PROG2L: equ $F4     ; 2nd program block length
-PROG2S: equ $F6     ; 2nd program block source address
-AUTOLN: equ $F8     ; Auto start line number
-PROG1L: equ $FA     ; 1st program block length
-AUTOAD: equ $FC     ; Auto start address (for NXTLIN)
-PROG1S: equ $FE     ; 1st program block source address ($2100)
+; ROM Routines
+SLOW_FAST:  equ 0x0207 ;
+NEXT_LINE:  equ 0x066c ;
+MAKE_ROOM:  equ 0x099e ;
+CLS:        equ 0x0a2a ;
+CLEAR:      equ 0x149a ; 
+CURSOR_IN:  equ 0x14ad ; 
+
+; Start
 
 org ROM_A
 
@@ -56,8 +53,8 @@ di
 ld hl,(RAMTOP)
 ld d,h              ; de=hl
 ld e,l              ; Copy RAMTOP to de (it was already set)
-ld a,0x3f           ; High-byte val to check on hl
 dec hl              ; hl = RAMTOP-1
+ld a,0x3f           ; High-byte val to check on hl
 LOOPA:
 ld (hl),0x00        ; Store $00 there
 dec hl
@@ -80,29 +77,29 @@ im 1                ; Interrupt mode 1
 ld iy,0x4000        ; Set index to start of RAM
 
 ; Set CDFLAG
-ld a,(ROM_A+PCDFLAG); Get CDFLAG value stored at end of ROM
+ld a,(PCDFLAG)      ; Get CDFLAG value stored at end of ROM
 ld (iy+0x3b),a      ; Set CDFLAG to stored value
 
 ; First program block
-ld hl,(ROM_A+PROG1S); Get block source from end of rom
-ld de,0x407d        ; Set block destination to start of program (16509)
-ld bc,(ROM_A+PROG1L); Get length of block to copy
+ld hl,(PROG1S)      ; Get block source from end of rom
+ld de,PROG          ; Set block destination to start of program (16509)
+ld bc,(PROG1L)      ; Get length of block to copy
 ldir                ; Copy first program block
 
-; Check for second prog block to copy and copy it
-ld bc,(ROM_A+PROG2L); Load bc with length of 2nd program block
-ld a,b
-or c
-jr z, MAKEDFILE     ; Skip copy for bc==0
-ld hl,(ROM_A+PROG2S); Get source address of 2nd program block
+; Copy second prog block
+ld bc,(PROG2L)      ; Load bc with length of 2nd program block
+;ld a,b
+;or c
+;jr z, MAKEDFILE     ; Skip copy for bc==0
+ld hl,(PROG2S)      ; Get source address of 2nd program block
 ldir                ; Copy program block 2
 
 MAKEDFILE:
 ex de,hl            ; hl <=> de, which is dest byte after program (D_FILE should start there)
 ;dec hl              ; Chess inserts a dec hl here, why? The others don't
 ld (D_FILE),hl      ; Set D_FILE location to be after the program
-ld b,0x19           ; Set it up as 25 newlines
-ld a,0x76           ; for a collapsed display file.
+ld b,25             ; Set it up as 25 newlines
+ld a,NEWLINE        ; for a collapsed display file.
 DNL:
 ld (hl),a           
 inc hl
@@ -110,46 +107,46 @@ djnz DNL
 ld (VARS),hl        ; Point VARS to just after display file
 
 ; Do some setup with an empty display and variables
-call 0x149a         ; CLEAR: clears the variable area (sets hl and E_LINE)
-call 0x14ad         ; CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl)
-call 0x0207         ; SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b)
-call 0x0a2a         ; CLS: will expand a collapsed display file if enough RAM (uses bc, a, hl, de)
+call CLEAR          ; ROM: clears the variable area (sets hl and E_LINE)
+call CURSOR_IN      ; ROM: sets up lower screen to 2 lines and clear calc stack (uses hl)
+call SLOW_FAST      ; ROM: test CDFLAG bit 6 to set mode (uses hl, a, b)
+call CLS            ; ROM: will expand a collapsed display file if enough RAM (uses bc, a, hl, de)
 
 ; First variables block check
-ld bc,(ROM_A+VARS1L); Get variables block 1 length
+ld bc,(VARS1L)      ; Get variables block 1 length
 ; If bc==0, no vars block, so skip vars loading
 ld a,b
 or c
 jr z, AUTORUN       ; Skip vars copy for bc==0
 
 ; Make room for total variables length
-ld hl,(ROM_A+VARS2L); Get variables block 2 length
+ld hl,(VARS2L)      ; Get variables block 2 length
 add hl,bc           ; hl=hl+bc = Total vars size
 ld b,h              ; bc = hl = total vars length
 ld c,l              ; so we can make room for the vars bytes
 ld hl,(E_LINE)      ; Get E_LINE
 dec hl              ; Point to the $80 byte at end of current vars
-call 0x099e         ; MAKE-ROOM: Insert bc spaces at hl, making room for the vars block. (uses a, hl, de, bc)
+call MAKE_ROOM      ; ROM: Insert bc spaces at hl, making room for the vars block. (uses a, hl, de, bc)
 inc hl              ; Point to VARS (hl points to one below the insert point after the LDDR)
 ex de,hl		    ; de=hl to set the destination (VARS) for the vars block
 
 ; First variables block
-ld hl,(ROM_A+VARS1S); Get variables block 1 source address
-ld bc,(ROM_A+VARS1L); Get variables block 1 length
+ld hl,(VARS1S)      ; Get variables block 1 source address
+ld bc,(VARS1L)      ; Get variables block 1 length
 ldir                ; Copy the vars block 1
 
 ; Second variables block
-ld bc,(ROM_A+VARS2L); Get varaibles block 2 length
+ld bc,(VARS2L)      ; Get varaibles block 2 length
 ; If bc==0, no vars block 2, so skip loading
-ld a,b
-or c
-jr z, AUTORUN       ; Skip vars 2 copy for bc==0
-ld hl,(ROM_A+VARS2S); Get variables block 2 source address
+;ld a,b
+;or c
+;jr z, AUTORUN       ; Skip vars 2 copy for bc==0
+ld hl,(VARS2S)      ; Get variables block 2 source address
 ldir                ; Copy the vars block 2
 
 AUTORUN:
-ld bc,(ROM_A+AUTOLN); Get program line to start
-ld de,(ROM_A+AUTOAD); Get program address to start - this comes from NXTLIN
+ld bc,(AUTOLN)      ; Get program line to start
+ld de,(AUTOAD)      ; Get program address to start - this comes from NXTLIN
 ld h,d              ; hl=de so hl sets NXTLIN when we call NEXT-LINE at the end
 ld l,e
 dec de              ; CH_ADD points to one less than NXTLIN
@@ -162,9 +159,30 @@ ld (iy+001h),080h   ; Load FLAGS with $80
 
 ; Mark we were here
 ld a,0xff
-ld (0x407C),a       ; We set the usused system variable byte before the first line to $FF (this lets us know we've loaded from ROM)
+ld (PROG-1),a       ; We set the usused system variable byte before the first line to $FF (this lets us know we've loaded from ROM)
 
 ; Start BASIC
-jp 0x066c           ; NEXT-LINE: Jump into BASIC. Reads NXTLIN to get address of next BASIC line
+jp NEXT_LINE        ; ROM: Jump into BASIC. Reads NXTLIN to get address of next BASIC line
+
+; Loader variables
+; I don't include these in the loader code arrays and assume they follow it. I
+; get the length of the loader code and add that to offsets that define these in
+; the C program. For example, PROG1S is offset 0, so it would have the length of
+; the loader added to it to get the offset in the ROM image for storing the
+; value, and in the assembler, these here get the correct memory address. The 4
+; PROG and VARS values come first as they are common to the loaders.
+
+PROG1S:  defw 0x0000 ; 1st program block source address
+PROG1L:  defw 0x0000 ; 1st program block length
+PROG2S:  defw 0x0000 ; 2nd program block source address
+PROG2L:  defw 0x0000 ; 2nd program block length
+VARS1S:  defw 0x0000 ; 1st VARS block source address
+VARS1L:  defw 0x0000 ; 1st VARS block length
+VARS2S:  defw 0x0000 ; 2nd VARS block source address
+VARS2L:  defw 0x0000 ; 2nd VARS block length
+AUTOAD:  defw 0x0000 ; Auto start address (for NXTLIN)
+AUTOLN:  defw 0x0000 ; Auto start line number
+PCDFLAG: defw 0x0000 ; Value for CDFLAG
+
 
 end
