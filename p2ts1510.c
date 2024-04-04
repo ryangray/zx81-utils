@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "1.0.2"
+#define VERSION "1.0.3"
 
 #define ROM8K 8192        /* 8K buffer for making the ROM images */
 
@@ -873,8 +873,19 @@ int main (int argc, char *argv[])
         /* This seems to be the special value for no autorun */
         b1 = 254;
         b2 = 255;
-        /* Not sure yet if this address matters in this case, but it works */
-        autoaddr = vars;
+        autoaddr = dfile;
+        autoline = -1;
+        if (tapeLikeLoader) /* Change the system variables */
+            {
+            sysStoreAddr(NXTLIN, autoaddr);
+            sysStoreAddr(CH_ADD, autoaddr-1);
+            }
+        }
+    else if (autoaddr == dfile)
+        {
+        /* No autorun set in P file */
+        b1 = 254; /* This seems to be a special value for no autorun */
+        b2 = 255;
         autoline = -1;
         if (tapeLikeLoader) /* Override system variables */
             {
@@ -903,22 +914,11 @@ int main (int argc, char *argv[])
             sysStoreAddr(CH_ADD, autoaddr-1);
             }
         autorun_check = 1;
-        }
-    else if (autoaddr == dfile)
-        {
-        /* Try setting it to the last line */
-        f = dfile - 2 - 16509;
-        while (f >= 0 && buff[f] != 0x76)
-            f--;
-        f++;
-        autoaddr = 16509 + f;
-        /* Get actual line number bytes */
-        b1 = buff[f];
-        b2 = buff[f+1];
-        fprintf(stderr,"Warning: Autorun address is D_FILE, setting to last line.\n");
-        autorun_warn = 1;
-        autorun_check = 1;
-        autoline = b1 * 256 + b2;
+        if (tapeLikeLoader)
+            {
+            sysStoreAddr(NXTLIN, autoaddr);
+            sysStoreAddr(CH_ADD, autoaddr-1);
+            }
         }
     else if (autoaddr < 16384)
         {
@@ -954,7 +954,7 @@ int main (int argc, char *argv[])
         /* Get actual line number bytes */
         b1 = buff[f];
         b2 = buff[f+1];
-        autoline = b1 + 256 * b2;
+        autoline = b1 * 256 + b2;
         if (f < pfile_size && !tapeLikeLoader && !includeVars)
             fprintf(stderr,"Warning: You will need to use the -t option or not use -v to include variables.\n");
         }
@@ -964,7 +964,7 @@ int main (int argc, char *argv[])
         /* Get actual line number bytes */
         b1 = buff[f];
         b2 = buff[f+1];
-        autoline = b1 + 256 * b2;
+        autoline = b1 * 256 + b2;
         autorun_check = 1;
         }
 
