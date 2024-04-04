@@ -1,3 +1,8 @@
+2024-04-04 ryangray
+    * Fix sime autorun line number calc bugs 
+    * Fix not setting system vars for -a option when using tape loader
+    * Change the no autorun address set to be DFILE rather than VARS
+
 2024-03-30 ryangray
     * Added a tape-like loader option to include system varaibles and display file
     * Improved autorun to handle more cases and show the BASIC line
