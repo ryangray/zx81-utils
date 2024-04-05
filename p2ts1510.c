@@ -144,22 +144,23 @@ BYTE ldr1[] = {
     0xed, 0x47,             /* ld i,a */
     0xed, 0x56,             /* im 1 */
     0xfd, 0x21, 0x00, 0x40, /* ld iy,0x4000     Set index to start of RAM */
-    0x3a, 0xc2, 0x20,		/* ld a,(PCDFLAG)   Get CDFLAG value stored at end of ROM  */
+    0x3a, 0xce, 0x20,		/* ld a,(PCDFLAG)   Get CDFLAG value stored at end of ROM  */
     0xfd, 0x77, 0x3b,       /* ld (iy+03bh),a   Set CDFLAG */
-    0x2a, 0xae, 0x20,       /* ld hl,(PROG1S)   Get block source from end of rom */
+    0xed, 0x4b, 0xbc, 0x20, /* ld bc,(PROG1L)   Get length of block to copy */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x15,             /* jr z, +0x15      Skip prog block copy for bc==0 (probably vars only) */
+    0x2a, 0xba, 0x20,       /* ld hl,(PROG1S)   Get block source from end of rom */
     0x11, 0x7d, 0x40,       /* ld de,0x407d     Set block destination to start of program (16509) */
-    0xed, 0x4b, 0xb0, 0x20, /* ld bc,(PROG1L)   Get length of block to copy */
     0xed, 0xb0,             /* ldir             Copy first program block */
     /* Check for second prog block to copy and copy it */
-    0xed, 0x4b, 0xb4, 0x20, /* ld bc,(PROG2L)   Load bc with length of 2nd program block */
-    //0x78,                   /* ld a,b */
-    //0xb1,                   /* or c */
-    //0x28, 0x05,             /* jr z, +5         Skip copy for bc==0 */
-    0x2a, 0xb2, 0x20,       /* ld hl,(PROG2S)   Get source address of 2nd program block */
+    0xed, 0x4b, 0xc0, 0x20, /* ld bc,(PROG2L)   Load bc with length of 2nd program block */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x05,             /* jr z, +5         Skip copy for bc==0 */
+    0x2a, 0xbe, 0x20,       /* ld hl,(PROG2S)   Get source address of 2nd program block */
     0xed, 0xb0,             /* ldir             Copy program block 2 */
     0xeb,                   /* ex de,hl         hl = de, which is dest byte after program (D_FILE should start there) */
-    /* Chess inserts a dec hl here, why?  */
-    /*0x2b,*/                   /* dec hl */
     0x22, 0x0c, 0x40,       /* ld (D_FILE),hl   Set D_FILE location to be after the program */
     0x06, 0x19,             /* ld b,0x19        Set it up as 25 newlines */
     0x3e, 0x76,             /* ld a,0x76 */
@@ -171,12 +172,12 @@ BYTE ldr1[] = {
     0xcd, 0xad, 0x14,       /* call 0x14ad  CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl) */
     0xcd, 0x07, 0x02,       /* call 0x0207  SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b) */
     0xcd, 0x2a, 0x0a,       /* call 0x0a2a  CLS: will expand a collapsed display file if enough RAM (uses bc, a, hl, de) */
-    0xed, 0x4b, 0xb8, 0x20, /* ld bc,(VARS1L)   Get variables block 1 length */
+    0xed, 0x4b, 0xc4, 0x20, /* ld bc,(VARS1L)   Get variables block 1 length */
     /* If bc==0, no vars block, so skip vars loading */
     0x78,                   /* ld a,b */
     0xb1,                   /* or c */
-    0x28, 0x21,             /* jr z, +0x21      Skip vars copy for bc==0 */
-    0x2a, 0xbc, 0x20,       /* ld hl,(VARS2L)   Get variables block 2 length */
+    0x28, 0x25,             /* jr z, +0x21      Skip vars copy for bc==0 */
+    0x2a, 0xc8, 0x20,       /* ld hl,(VARS2L)   Get variables block 2 length */
     0x09,                   /* add hl, bc  hl=hl+bc = Total vars size */
     0x44,                   /* ld b,h bc = hl = total vars length */
     0x4d,                   /* ld c,l */
@@ -185,19 +186,18 @@ BYTE ldr1[] = {
     0xcd, 0x9e, 0x09,       /* call 0x099e      Making room for the vars block? We will have to add VARS1L and VARS2L */
     0x23,                   /* inc hl           hl must point to VARS-1 after? */
     0xeb,                   /* ex de,hl		    de=hl to set the destination (VARS) for the vars block */
-    0x2a, 0xb6, 0x20,       /* ld hl,(VARS1S)   Get variables block 1 source address */
-    0xed, 0x4b, 0xb8, 0x20, /* ld bc,(VARS1L)   Get variables block 1 length */
+    0x2a, 0xc2, 0x20,       /* ld hl,(VARS1S)   Get variables block 1 source address */
+    0xed, 0x4b, 0xc4, 0x20, /* ld bc,(VARS1L)   Get variables block 1 length */
     0xed, 0xb0,             /* ldir             Copy the vars block 1 */
-    0xed, 0x4b, 0xbc, 0x20, /* ld bc,(VARS2L)   Get varaibles block 2 length */
-    /* If bc==0, no vars block 2, so skip loading */
-    //0x78,                   /* ld a,b */
-    //0xb1,                   /* or c */
-    //0x28, 0x05,             /* jr z, +5         Skip vars 2 copy for bc==0 */
-    0x2a, 0xba, 0x20,       /* ld hl,(VARS2S)   Get variables block 2 source address */
+    0xed, 0x4b, 0xc8, 0x20, /* ld bc,(VARS2L)   Get varaibles block 2 length */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x05,             /* jr z, +5         Skip vars 2 copy for bc==0 */
+    0x2a, 0xc6, 0x20,       /* ld hl,(VARS2S)   Get variables block 2 source address */
     0xed, 0xb0,             /* ldir             Copy the vars block 2 */
     /* All done copying, set auto start */
-    0xed, 0x4b, 0xc0, 0x20, /* ld bc,(AUTOLN)   Get program line to start */
-    0xed, 0x5b, 0xbe, 0x20, /* ld de,(AUTOAD)   Get program address to start **** This needs to be NXTLIN because */
+    0xed, 0x4b, 0xcc, 0x20, /* ld bc,(AUTOLN)   Get program line to start */
+    0xed, 0x5b, 0xca, 0x20, /* ld de,(AUTOAD)   Get program address to start **** This needs to be NXTLIN because */
     0x62,                   /* ld h,d hl=de     For call to NEXT-LINE later     **** we dec de to set CH_ADD with it */
     0x6b,                   /* ld l,e */
     0x1b,                   /* dec de           CH_ADD points one less than you would think */
@@ -222,13 +222,16 @@ BYTE ldrp[] = {
     0x3e, 0x1e,             /* ld a,0x1e */
     0xed, 0x47,             /* ld i,a */
     0xed, 0x56,             /* im 1 */
-    0x2a, 0x2d, 0x20,       /* ld hl,(LDRVAR+PROG1S)   Get block source from rom */
+    0x2a, 0x31, 0x20,       /* ld hl,(LDRVAR+PROG1S)   Get block source from rom */
     0x11, 0x09, 0x40,       /* ld de,0x4009     Set block destination to start of saved system variables (16393) */
-    0xed, 0x4b, 0x2f, 0x20, /* ld bc,(LDRVAR+PROG1L)   Get length of block to copy */
+    0xed, 0x4b, 0x33, 0x20, /* ld bc,(LDRVAR+PROG1L)   Get length of block to copy */
     0xed, 0xb0,             /* ldir             Copy first program block */
     /* Check for second prog block to copy and copy it */
-    0xed, 0x4b, 0x33, 0x20, /* ld bc,(LDRVAR+PROG2L)  Load bc with length of 2nd program block */
-    0x2a, 0x31, 0x20,       /* ld hl,(LDRVAR+PROG2S) */
+    0xed, 0x4b, 0x37, 0x20, /* ld bc,(LDRVAR+PROG2L)  Load bc with length of 2nd program block */
+    0x78,                   /* ld a,b */
+    0xb1,                   /* or c */
+    0x28, 0x05,             /* jr z, +5         Skip for bc==0 */
+    0x2a, 0x35, 0x20,       /* ld hl,(LDRVAR+PROG2S) */
     0xed, 0xb0,             /* ldir             Copy program block 2 */
     0xcd, 0xad, 0x14,       /* call 0x14ad  CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl) */
     0xcd, 0x07, 0x02,       /* call 0x0207  SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b) */
@@ -813,7 +816,6 @@ int main (int argc, char *argv[])
     else
         {
         rom[loaderSize + PCDFLAG] = cdflag;
-        romStoreAddr(AUTOAD, nxtlin);   /* Auto start address */
         romStoreAddr(VARS2L, vars2len);     /* Length  of 2nd variables block */
         romStoreAddr(VARS2S, vars2addr);    /* Address of 2nd variables block */
         romStoreAddr(VARS1L, vars1len);     /* Length  of 1st variables block */
@@ -881,19 +883,6 @@ int main (int argc, char *argv[])
             sysStoreAddr(CH_ADD, autoaddr-1);
             }
         }
-    else if (autoaddr == dfile)
-        {
-        /* No autorun set in P file */
-        b1 = 254; /* This seems to be a special value for no autorun */
-        b2 = 255;
-        autoline = -1;
-        if (tapeLikeLoader) /* Override system variables */
-            {
-            sysStoreAddr(NXTLIN, autoaddr);
-            sysStoreAddr(CH_ADD, autoaddr-1);
-            /* Actually, since PPC is not stored in the P file, how do we do this? */
-            }
-        }
     else if (0 <= autorun && autorun < 10000) /* Autorun line set by '-a' option */
         {
         /* f points to the autorun line or the next line */
@@ -908,17 +897,23 @@ int main (int argc, char *argv[])
             {
             fprintf(stderr,"Autorun line %d not found, using the next line: %d\n", autorun, autoline);
             }
+        else
+            {
+            fprintf(stderr,"Autorun line %d found at: %d\n", autorun, autoaddr);
+            }
+        autorun_check = 1;
         if (tapeLikeLoader) /* Override system variables */
             {
             sysStoreAddr(NXTLIN, autoaddr);
             sysStoreAddr(CH_ADD, autoaddr-1);
             }
-        autorun_check = 1;
-        if (tapeLikeLoader)
-            {
-            sysStoreAddr(NXTLIN, autoaddr);
-            sysStoreAddr(CH_ADD, autoaddr-1);
-            }
+        }
+    else if (autoaddr == dfile)
+        {
+        /* No autorun set in P file */
+        b1 = 254; /* This seems to be a special value for no autorun */
+        b2 = 255;
+        autoline = -1;
         }
     else if (autoaddr < 16384)
         {
@@ -947,7 +942,7 @@ int main (int argc, char *argv[])
     else if (autoaddr > dfile) /* The autorun address is not valid */
         {
         /* But some things put one in the variables area */
-        fprintf(stderr,"Warning: Autorun address (%d) is not within the BASIC program, autorun may fail.\n", autoaddr);
+        fprintf(stderr,"Warning: Autorun address (%d) is not within the BASIC program,\n         autorun may fail.\n", autoaddr);
         autorun_warn = 1;
         autorun_check = 1;
         f = autoaddr - 16509;

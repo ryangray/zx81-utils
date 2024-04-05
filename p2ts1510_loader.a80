@@ -81,16 +81,19 @@ ld a,(PCDFLAG)      ; Get CDFLAG value stored at end of ROM
 ld (iy+0x3b),a      ; Set CDFLAG to stored value
 
 ; First program block
+ld bc,(PROG1L)      ; Get length of block to copy
+ld a,b
+or c
+jr z, MAKEDFILE     ; Skip prog block copy for bc==0 (probably vars only)
 ld hl,(PROG1S)      ; Get block source from end of rom
 ld de,PROG          ; Set block destination to start of program (16509)
-ld bc,(PROG1L)      ; Get length of block to copy
 ldir                ; Copy first program block
 
 ; Copy second prog block
 ld bc,(PROG2L)      ; Load bc with length of 2nd program block
-;ld a,b
-;or c
-;jr z, MAKEDFILE     ; Skip copy for bc==0
+ld a,b
+or c
+jr z, MAKEDFILE     ; Skip copy for bc==0
 ld hl,(PROG2S)      ; Get source address of 2nd program block
 ldir                ; Copy program block 2
 
@@ -138,9 +141,9 @@ ldir                ; Copy the vars block 1
 ; Second variables block
 ld bc,(VARS2L)      ; Get varaibles block 2 length
 ; If bc==0, no vars block 2, so skip loading
-;ld a,b
-;or c
-;jr z, AUTORUN       ; Skip vars 2 copy for bc==0
+ld a,b
+or c
+jr z, AUTORUN       ; Skip vars 2 copy for bc==0
 ld hl,(VARS2S)      ; Get variables block 2 source address
 ldir                ; Copy the vars block 2
 
@@ -182,7 +185,7 @@ VARS2S:  defw 0x0000 ; 2nd VARS block source address
 VARS2L:  defw 0x0000 ; 2nd VARS block length
 AUTOAD:  defw 0x0000 ; Auto start address (for NXTLIN)
 AUTOLN:  defw 0x0000 ; Auto start line number
-PCDFLAG: defw 0x0000 ; Value for CDFLAG
+PCDFLAG: defb 0x00   ; Value for CDFLAG
 
 
 end
