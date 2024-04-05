@@ -584,7 +584,7 @@ int main (int argc, char *argv[])
         if ( in == NULL )
             {
             fprintf(stderr, "Error: couldn't open file '%s'\n", infile);
-            exit(1);
+            exit(EXIT_FAILURE);
             }
         }
 
@@ -664,6 +664,7 @@ int main (int argc, char *argv[])
     if (sys[0] != 0)
         {
         fprintf(stderr,"Doesn't appear to be a valid ZX81 P file.\n");
+        cleanup();
         exit(EXIT_FAILURE);
         }
 
@@ -732,6 +733,7 @@ int main (int argc, char *argv[])
             if (prog2len > ROM8K)
                 {
                 fprintf(stderr, "Error: P file size is larger than two 8K ROMs.\n");
+                cleanup();
                 exit(EXIT_FAILURE);
                 }
             if (!oneRom)
@@ -756,6 +758,7 @@ int main (int argc, char *argv[])
             if (prog2len + vars_size > ROM8K)
                 {
                 fprintf(stderr, "Error: Program + variables size is larger than two 8K ROMs.\n");
+                cleanup();
                 exit(EXIT_FAILURE);
                 }
             vars1len  = vars_size;
@@ -766,6 +769,7 @@ int main (int argc, char *argv[])
         else if (prog2len > ROM8K)
             {
             fprintf(stderr, "Error: Program size is larger than two 8K ROMs.\n");
+            cleanup();
             exit(EXIT_FAILURE);
             }
         if (!oneRom)
@@ -791,6 +795,7 @@ int main (int argc, char *argv[])
                 if (vars2len > ROM8K)
                     {
                     fprintf(stderr, "Error: Program + variables size is larger than two 8K ROMs.\n");
+                    cleanup();
                     exit(EXIT_FAILURE);
                     }
                 if (!oneRom)
