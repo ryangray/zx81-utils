@@ -493,6 +493,10 @@ Options:
   after the auto start include a `RUN` which clears the variables anyway. This
   will also show you the output file name(s) that would be used.
 
+* `-t` - Use the tape-like loader which will load all of the P file contents,
+  which includes most all of the system variables, the program, the display
+  file, and the variables. This ignores the `-v` option.
+ 
 The cartridge ROM will autorun on startup on a TS1500, but on a ZX81 or 
 TS1000, you will have to give the command `RAND USR 8192` to start the ROM
 loader.
