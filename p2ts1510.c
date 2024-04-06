@@ -545,7 +545,6 @@ void printLine (FILE* f, ADDR lineAddr)
     len = dpeek(lineAddr+2);
     len = len < 256 ? len : 256; /* Limit length */
     end = x + 4 + len;
-    fprintf(f, "Autorun line code:\n");
     fprintf(f, "  %4d", lineNum(buff[x], buff[x+1]));
     for (x += 4; x < end; x++)
         {
@@ -938,6 +937,7 @@ int main (int argc, char *argv[])
         b1 = 254; /* This seems to be a special value for no autorun */
         b2 = 255;
         autoline = -1;
+        autorun_warn = 1;
         }
     else if (autoaddr < SYSSAVE)
         {
@@ -1043,7 +1043,11 @@ int main (int argc, char *argv[])
         rom[loaderSize+AUTOLN+1] = b2;
         romStoreAddr(AUTOAD, autoaddr);
         }
-    fprintf(stderr, "Autorun addr = %d\n", autoaddr);
+    fprintf(stderr, "Autorun addr = %d", autoaddr);
+    if (autoaddr == dfile)
+        fprintf(stderr," (DFILE)\n");
+    else
+        fprintf(stderr,"\n");
     if (b1 == 254 && b2 == 255)
         {
         fprintf(stderr, "No Autorun\n");
@@ -1053,11 +1057,22 @@ int main (int argc, char *argv[])
             fprintf(stderr,"what line it should be and use the '-a' option to set the correct start line.\n");
             fprintf(stderr,"The line is normally the line after a SAVE command.\n");
             }
+        if (autoaddr == dfile)
+            {
+            /* Give hint by showing the last line */
+            c = dfile - 2 - SYSSAVE;
+            while (c >= 0 && buff[c] != NEWLINE)
+                c--;
+            c++;
+            fprintf(stderr,"Last BASIC line is:\n");
+            printLine(stderr, c + SYSSAVE);
+            }
         }
     else
         {
         fprintf(stderr, "Autorun line = %d\n", autoline);
         /* Print the line that will be autorun */
+        fprintf(stderr, "Autorun line code:\n");
         printLine(stderr, autoaddr);
         if (autorun_warn == 1)
             {

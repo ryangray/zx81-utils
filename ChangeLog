@@ -1,7 +1,8 @@
 2024-04-05 ryangray
     * Load whole P file in all cases to be able to check and sort out the autorun
     * Load whole P file into one buffer rather than system vars in a separate one
-
+    * Add clarity for a no autorun case and print last BASIC line to help
+  
 2024-04-04 ryangray
     * Fix sime autorun line number calc bugs 
     * Fix not setting system vars for -a option when using tape loader
