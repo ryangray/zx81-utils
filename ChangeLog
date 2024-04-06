@@ -1,3 +1,6 @@
+2024-04-06 ryangray
+    * Enhance and organize the info output
+  
 2024-04-05 ryangray
     * Load whole P file in all cases to be able to check and sort out the 
       autorun (p2ts1510)

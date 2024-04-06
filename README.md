@@ -493,6 +493,9 @@ Options:
   after the auto start include a `RUN` which clears the variables anyway. This
   will also show you the output file name(s) that would be used.
 
+  This output is written to the standard error output, so it does not redirect
+  with the standard output. To redirect it, use `p2ts1510 ... 2>file`.
+
 * `-t` - Use the tape-like loader which will load all of the P file contents,
   which includes most all of the system variables, the program, the display
   file, and the variables. This ignores the `-v` option.
