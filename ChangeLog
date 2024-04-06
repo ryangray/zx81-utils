@@ -1,36 +1,41 @@
 2024-04-05 ryangray
-    * Load whole P file in all cases to be able to check and sort out the autorun
-    * Load whole P file into one buffer rather than system vars in a separate one
-    * Add clarity for a no autorun case and print last BASIC line to help
+    * Load whole P file in all cases to be able to check and sort out the 
+      autorun (p2ts1510)
+    * Load whole P file into one buffer rather than system vars in a separate
+      one (p2ts1510)
+    * Add clarity for a no autorun case and print last BASIC line to help 
+      (p2ts1510)
   
 2024-04-04 ryangray
-    * Fix sime autorun line number calc bugs 
-    * Fix not setting system vars for -a option when using tape loader
-    * Change the no autorun address set to be DFILE rather than VARS
+    * Fix sime autorun line number calc bugs (p2ts1510)
+    * Fix not setting system vars for -a option when using tape loader (p2ts1510)
+    * Change the no autorun address set to be DFILE rather than VARS (p2ts1510) 
 
 2024-03-30 ryangray
-    * Added a tape-like loader option to include system varaibles and display file
-    * Improved autorun to handle more cases and show the BASIC line
+    * Added a tape-like loader option to include system varaibles and display 
+      file (p2ts1510)
+    * Improved autorun to handle more cases and show the BASIC line (p2ts1510)
 
 2024-03-23 ryangray
-    * Tighten up some of the variable data types
-    * Add printing if set to FAST or SLOW mode for CDFLAG in info block
+    * Tighten up some of the variable data types (p2ts1510)
+    * Add printing if set to FAST or SLOW mode for CDFLAG in info block (p2ts1510)
 
 2024-03-19 ryangray
     * Add clearer info output and include some autorun problem detection
     * Add case when NXTLIN equals D_FILE and try to use the last line for
-      autorun.
-    * Add printing of the autorun line BASIC code to the info output. 
-    * Clean up the code some.
+      autorun (p2ts1510).
+    * Add printing of the autorun line BASIC code to the info output (p2ts1510). 
+    * Clean up the code some (p2ts1510).
 
 2024-03-15 ryangray
     * Change the -v option to exclude the variables rather than include them so
-      that the default is to include them.
+      that the default is to include them (p2ts1510).
     * Change the default to output one ROM file and add the option -2 to make
-      two ROM files if needed.
+      two ROM files if needed (p2ts1510).
 
 2024-03-07 ryangray
-    * Add option to only print the P file and ROM block info and not write any ROMs.
+    * p2ts1510: Add -i option to only print the P file and ROM block info and 
+      not write any ROMs.
 
 2024-03-05 ryangray
     * New utility, p2ts1510, to convert P file programs to a TS1510 cartridge 
