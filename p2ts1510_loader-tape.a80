@@ -1,0 +1,85 @@
+; TS1015 loader program
+; Unified from original codes in existing carts to be generic, allowing for a
+; program, and optionally the variables, to be stored in potentially in two 
+; ROMs, where either the program is split into two parts, or the variables are
+; split into two parts. The part info is stored at the end of the first ROM as
+; before, but with added bytes for a variables 1 and 2 parts.
+; The intent is to allow for any program to be made into a cartridge from its P
+; file. The loader is $B5 bytes long, so still ends before $100, but is longer
+; than the short 1 block program loader, of course.
+
+; Cartridge 8K ROM origins
+ROM_A: equ  $2000
+ROM_B: equ  $8000
+
+; System variables
+FLAGS:  equ $4001
+ERR_SP: equ $4002
+RAMTOP: equ $4004
+PPC:    equ $4007
+D_FILE: equ $400c
+VARS:   equ $4010
+E_LINE: equ $4014
+CH_ADD: equ $4016
+STKEND: equ $4022
+NXTLIN: equ $4029
+OLDPPC: equ $402B
+CDFLAG: equ $403b
+PROG:   equ $407d
+
+NEWLINE: equ $76
+
+; ROM Routines
+SLOW_FAST:  equ 0x0207 ;
+NEXT_LINE:  equ 0x066c ;
+GOTO_2:     equ 0x0e86 ;
+CURSOR_IN:  equ 0x14ad ; 
+
+; Start
+
+org ROM_A
+
+ld bc, $0000        ; So first byte contains 0x01
+out ($fd),a
+di
+ld a,0x1e
+ld i,a
+im 1                ; Interrupt mode 1
+
+; Copy first program block
+ld hl,(PROG1S); Get block source from rom
+ld de,0x4009        ; Set block destination to start saved system variables (16393)
+ld bc,(PROG1L); Get length of block to copy
+ldir                ; Copy first program block
+
+; Check for second prog block to copy and copy it
+ld bc,(PROG2L); Load bc with length of 2nd program block (may be 0)
+ld a,b
+or c
+jr z, SCREEN        ; Skip copy for bc==0
+ld hl,(PROG2S); Get source address of 2nd program block
+ldir                ; Copy program block 2
+
+SCREEN:
+; Do some setup with an empty display and variables
+call CURSOR_IN      ; ROM: sets up lower screen to 2 lines and clear calc stack (uses hl)
+call SLOW_FAST      ; ROM: test CDFLAG bit 6 to set mode (uses hl, a, b)
+
+; Start BASIC
+ld hl,(NXTLIN)      ; Address of next line to interpret
+jp NEXT_LINE        ; ROM: Jump into basic
+
+; Loader variables
+; I don't include these in the loader code arrays and assume they follow it. I
+; get the length of the loader code and add that to offsets that define these in
+; the C program. For example, PROG1S is offset 0, so it would have the length of
+; the loader added to it to get the offset in the ROM image for storing the
+; value, and in the assembler, these here get the correct memory address. The 4
+; PROG and VARS values come first as they are common to the loaders.
+
+PROG1S: defw 0x0000
+PROG1L: defw 0x0000
+PROG2S: defw 0x0000
+PROG2L: defw 0x0000
+
+end

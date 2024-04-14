@@ -1,3 +1,8 @@
+2024-04-?? ryangray
+    * Trying to organize the test cases files, putting generated files in test/
+      and leaving source files in the main folder for now. All the test products
+      will be put in version control to be able to compare changes.
+
 2024-04-06 ryangray
     * Enhance and organize the info output
   
