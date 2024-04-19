@@ -1,3 +1,18 @@
+# Files for git to ignore w.r.t. version control
+
 a.out
-p2txt
-p2txt.o
+/*.o
+/printout.txt
+/zesarux_index_menu.txt
+
+# Executables
+/p2txt
+/p2speccy
+/hex2rem
+/hex2tap
+/p2ts1510
+/tap0auto
+
+# Folders
+
+/releases/
