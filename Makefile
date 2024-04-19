@@ -37,26 +37,30 @@ p2t-test0: p2txt
 
 p2t-test1: TEST1-p2txt-r TEST1-p2txt-1 TEST1-p2txt-z TEST1-p2txt-2
 
-# TEST1.bas -> zmakebas -> TEST1.p -> p2txt -z -> TEST1-p2txt-z.txt -> zmakebas
-# -> TEST1-p2txt-z.p (compare to TEST1.p)
+# TEST1.bas -> zmakebas -> test/TEST1.p -> p2txt -z -> TEST1-p2txt-z.txt -> zmakebas
+# -> TEST1-p2txt-z.p (compare to test/TEST1.p)
 
 # TEST2.bas -> zmakebas -p -> TEST2.p -> p2speccy -> TEST2-p2speccy.txt ->
 # zmakebas -> TEST2-p2speccy.tap
 
-TEST1-p2txt-r: p2txt TEST1.p
-	./p2txt -r TEST1.p > test/TEST1-p2txt-r.txt
+test/TEST1.p: TEST1.bas
+
+test/TEST2.p: TEST2.bas
+
+TEST1-p2txt-r: p2txt test/TEST1.p
+	./p2txt -r test/TEST1.p > test/TEST1-p2txt-r.txt
 	git diff test/TEST1-p2txt-r.txt
 
-TEST1-p2txt-1: p2txt TEST1.p
-	./p2txt -1 TEST1.p > test/TEST1-p2txt-1.txt
+TEST1-p2txt-1: p2txt test/TEST1.p
+	./p2txt -1 test/TEST1.p > test/TEST1-p2txt-1.txt
 
-TEST1-p2txt-z: p2txt TEST1.p
-	./p2txt -z TEST1.p > test/TEST1-p2txt-z.txt
+TEST1-p2txt-z: p2txt test/TEST1.p
+	./p2txt -z test/TEST1.p > test/TEST1-p2txt-z.txt
 	zmakebas -p -o test/TEST1-p2txt-z.p test/TEST1-p2txt-z.txt
-	diff TEST1.p test/TEST1-p2txt-z.p
+	diff test/TEST1.p test/TEST1-p2txt-z.p
 
-TEST1-p2txt-2: p2txt TEST1.p
-	./p2txt -2 TEST1.p > test/TEST1-p2txt-2.txt
+TEST1-p2txt-2: p2txt test/TEST1.p
+	./p2txt -2 test/TEST1.p > test/TEST1-p2txt-2.txt
 
 p2speccy-all: p2speccy p2s-test1 p2s-test2
 
@@ -64,13 +68,14 @@ p2speccy: p2speccy.o
 
 p2s-test1: TEST1-p2speccy-r TEST1-p2speccy-z TEST1-p2speccy-tap
 
-p2s-test2: TEST2.p
+p2s-test2: p2speccy TEST2.p
+	./p2speccy -z TEST2.p > test/TEST2-p2speccy.txt
 
-TEST1-p2speccy-z: p2speccy TEST1.p
-	./p2speccy -z TEST1.p > test/TEST1-p2speccy-z.txt
+TEST1-p2speccy-z: p2speccy test/TEST1.p
+	./p2speccy -z test/TEST1.p > test/TEST1-p2speccy-z.txt
 
-TEST1-p2speccy-r: p2speccy TEST1.p
-	./p2speccy -r TEST1.p > test/TEST1-p2speccy-r.txt
+TEST1-p2speccy-r: p2speccy test/TEST1.p
+	./p2speccy -r test/TEST1.p > test/TEST1-p2speccy-r.txt
 
 TEST1-p2speccy-tap: TEST1-p2speccy-z
 	zmakebas -n TEST1 -o test/TEST1-p2speccy.tap test/TEST1-p2speccy-z.txt
@@ -86,21 +91,21 @@ rem2bin-all: rem2bin rem2bin-test
 
 rem2bin: rem2bin.o
 
-rem2bin-test: rem2bin TEST1.p
-	./rem2bin -h -o test/rem2bin.txt TEST1.p
-	./rem2bin -b -o test/rem2bin.bin TEST1.p
+rem2bin-test: rem2bin test/TEST1.p
+	./rem2bin -h -o test/rem2bin.txt test/TEST1.p
+	./rem2bin -b -o test/rem2bin.bin test/TEST1.p
 
-hex2tap-all: hex2tap pictest.tap
+hex2tap-all: hex2tap test/pictest.tap
 
 hex2tap: hex2tap.o
 
-pic.tap: hex2tap
+test/pic.tap: hex2tap pic.scr
 	./hex2tap -b -a SCR -n pic -o test/pic.tap pic.scr
 
-pictest.tap: test/pic.tap
+test/pictest.tap: test/pic.tap
 	cat loadpic.tap test/pic.tap > test/pictest.tap
 
-pictest-demo:
+pictest-demo: test/pictest.tap
 	fuse --auto-load test/pictest.tap &
 
 tap0auto-all: tap0auto
