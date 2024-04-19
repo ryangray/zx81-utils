@@ -31,9 +31,13 @@ p2txt-all: p2txt p2t-test1 p2t-test0
 
 p2txt: p2txt.o
 
-p2t-test0: p2txt
+p2t-test0: test/hitch-h-p2txt-z.bas test/hitch-h-p2txt-r.txt
+
+test/hitch-h-p2txt-z.bas: p2txt
 	./p2txt -z hitch-h.p > test/hitch-h-p2txt-z.bas
-	./p2txt -r hitch-h.p > test/hitch-h-p2txt-r.bas
+
+test/hitch-h-p2txt-r.txt: p2txt
+	./p2txt -r hitch-h.p > test/hitch-h-p2txt-r.txt
 
 p2t-test1: TEST1-p2txt-r TEST1-p2txt-1 TEST1-p2txt-z TEST1-p2txt-2
 
@@ -42,10 +46,10 @@ p2t-test1: TEST1-p2txt-r TEST1-p2txt-1 TEST1-p2txt-z TEST1-p2txt-2
 
 # TEST2.bas -> zmakebas -p -> TEST2.p -> p2speccy -> TEST2-p2speccy.txt ->
 # zmakebas -> TEST2-p2speccy.tap
+#zmakebas -p -n TEST1 -o test/TEST1.p TEST1.bas
 
-test/TEST1.p: TEST1.bas
-
-test/TEST2.p: TEST2.bas
+test/%.p: %.bas
+	zmakebas -p -n $* -o $@ $<
 
 TEST1-p2txt-r: p2txt test/TEST1.p
 	./p2txt -r test/TEST1.p > test/TEST1-p2txt-r.txt
@@ -68,8 +72,8 @@ p2speccy: p2speccy.o
 
 p2s-test1: TEST1-p2speccy-r TEST1-p2speccy-z TEST1-p2speccy-tap
 
-p2s-test2: p2speccy TEST2.p
-	./p2speccy -z TEST2.p > test/TEST2-p2speccy.txt
+p2s-test2: p2speccy test/TEST2.p
+	./p2speccy -z test/TEST2.p > test/TEST2-p2speccy.txt
 
 TEST1-p2speccy-z: p2speccy test/TEST1.p
 	./p2speccy -z test/TEST1.p > test/TEST1-p2speccy-z.txt
@@ -77,7 +81,7 @@ TEST1-p2speccy-z: p2speccy test/TEST1.p
 TEST1-p2speccy-r: p2speccy test/TEST1.p
 	./p2speccy -r test/TEST1.p > test/TEST1-p2speccy-r.txt
 
-TEST1-p2speccy-tap: TEST1-p2speccy-z
+TEST1-p2speccy-tap: test/TEST1-p2speccy-z.txt
 	zmakebas -n TEST1 -o test/TEST1-p2speccy.tap test/TEST1-p2speccy-z.txt
 
 hex2rem-all: hex2rem hex2rem-test1
@@ -91,13 +95,19 @@ rem2bin-all: rem2bin rem2bin-test
 
 rem2bin: rem2bin.o
 
-rem2bin-test: rem2bin test/TEST1.p
+rem2bin-test: test/rem2bin.txt test/rem2bin.bin
+
+test/rem2bin.txt: rem2bin test/TEST1.p
 	./rem2bin -h -o test/rem2bin.txt test/TEST1.p
+
+test/rem2bin.bin: rem2bin test/TEST1.p
 	./rem2bin -b -o test/rem2bin.bin test/TEST1.p
 
-hex2tap-all: hex2tap test/pictest.tap
+hex2tap-all: hex2tap hex2tap-test
 
 hex2tap: hex2tap.o
+
+hex2tap-test: test/pictest.tap
 
 test/pic.tap: hex2tap pic.scr
 	./hex2tap -b -a SCR -n pic -o test/pic.tap pic.scr
@@ -112,7 +122,7 @@ tap0auto-all: tap0auto
 
 tap0auto: tap0auto.o
 
-p2ts1510-all: p2ts1510
+p2ts1510-all: p2ts1510 p2ts1510-loader p2ts1510-loader-tape p2ts1510-test
 
 p2ts1510: p2ts1510.o
 
@@ -125,7 +135,7 @@ p2ts1510-test: p2ts1510 hello.p
 	./p2ts1510 -t -o test/hello-p2ts1510-t.rom hello.p
 	./p2ts1510 -o test/hello-p2ts1510-s.rom hello.p
 
-.PHONY: clean
+.PHONY: clean install-home
 
 clean:
 	rm -f core

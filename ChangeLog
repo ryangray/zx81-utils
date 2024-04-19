@@ -1,7 +1,11 @@
-2024-04-?? ryangray
+2024-04-19 ryangray
     * Trying to organize the test cases files, putting generated files in test/
       and leaving source files in the main folder for now. All the test products
       will be put in version control to be able to compare changes.
+    * Re-jigger Makefile as I learn more how to do them properly. Make sure all
+      targets with non-file dependencies don't have an action because it would
+      always run. Make sure targets wqith actions have real file dependencies 
+      and not non-file dependencies.
 
 2024-04-06 ryangray
     * Enhance and organize the info output
