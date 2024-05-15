@@ -45,6 +45,7 @@ di
 ld a,0x1e
 ld i,a
 im 1                ; Interrupt mode 1
+ld iy,0x4000        ; Set index to start of RAM
 
 ; Copy first program block
 ld hl,(PROG1S); Get block source from rom
@@ -56,17 +57,31 @@ ldir                ; Copy first program block
 ld bc,(PROG2L); Load bc with length of 2nd program block (may be 0)
 ld a,b
 or c
-jr z, SCREEN        ; Skip copy for bc==0
-ld hl,(PROG2S); Get source address of 2nd program block
+jr z, TOPMEM        ; Skip copy for bc==0
+ld hl,(PROG2S)      ; Get source address of 2nd program block
 ldir                ; Copy program block 2
 
-SCREEN:
+TOPMEM:
+ld hl,(RAMTOP)
+dec hl              ; hl = RAMTOP-1
+ld (hl),0x3e        ; Put $3e at top of BASIC RAM
+dec hl              ;
+ld sp,hl            ; Point sp just below that
+
 ; Do some setup with an empty display and variables
 call CURSOR_IN      ; ROM: sets up lower screen to 2 lines and clear calc stack (uses hl)
 call SLOW_FAST      ; ROM: test CDFLAG bit 6 to set mode (uses hl, a, b)
 
+; System vars that didn't get set from the P file data
+ld (iy+001h),080h   ; Load FLAGS with $80
+ld hl,(NXTLIN)
+ld b,(hl)
+inc hl
+ld c,(hl)
+ld (PPC),bc         ; Set line number of statement being executed
+dec hl
+
 ; Start BASIC
-ld hl,(NXTLIN)      ; Address of next line to interpret
 jp NEXT_LINE        ; ROM: Jump into basic
 
 ; Loader variables

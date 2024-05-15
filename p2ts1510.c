@@ -233,21 +233,34 @@ BYTE ldrp[] = {
     0x3e, 0x1e,             /* ld a,0x1e */
     0xed, 0x47,             /* ld i,a */
     0xed, 0x56,             /* im 1 */
-    0x2a, 0x31, 0x20,       /* ld hl,(LDRVAR+PROG1S)   Get block source from rom */
+    0xfd, 0x21, 0x00, 0x40, /* ld iy,0x4000     Set index to start of RAM */
+    0x2a, 0x49, 0x20,       /* ld hl,(PROG1S)   Get block source from rom */
     0x11, 0x09, 0x40,       /* ld de,0x4009     Set block destination to start of saved system variables (16393) */
-    0xed, 0x4b, 0x33, 0x20, /* ld bc,(LDRVAR+PROG1L)   Get length of block to copy */
+    0xed, 0x4b, 0x4b, 0x20, /* ld bc,(PROG1L)   Get length of block to copy */
     0xed, 0xb0,             /* ldir             Copy first program block */
     /* Check for second prog block to copy and copy it */
-    0xed, 0x4b, 0x37, 0x20, /* ld bc,(LDRVAR+PROG2L)  Load bc with length of 2nd program block */
+    0xed, 0x4b, 0x4f, 0x20, /* ld bc,(PROG2L)  Load bc with length of 2nd program block */
     0x78,                   /* ld a,b */
     0xb1,                   /* or c */
-    0x28, 0x05,             /* jr z, +5         Skip for bc==0 */
-    0x2a, 0x35, 0x20,       /* ld hl,(LDRVAR+PROG2S) */
+    0x28, 0x05,             /* jr z, +0x0D      Skip for bc==0 */
+    0x2a, 0x4d, 0x20,       /* ld hl,(PROG2S) */
     0xed, 0xb0,             /* ldir             Copy program block 2 */
-    0xcd, 0xad, 0x14,       /* call 0x14ad  CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl) */
-    0xcd, 0x07, 0x02,       /* call 0x0207  SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b) */
-    /* Start BASIC interpreter */
+    0x2a, 0x04, 0x40,       /* ld hl,(RAMTOP) */
+    0x2b,                   /* dec hl */
+    0x36, 0x3e,             /* ld (hl),0x3e     Put 0x3e at the top of BASIC RAM */
+    0x2b,                   /* dec hl */
+    0xf9,                   /* ld sp,hl         Point sp just below that */
+    0xcd, 0xad, 0x14,       /* call 0x14ad      CURSOR-IN: sets up lower screen to 2 lines and clear calc stack (uses hl) */
+    0xcd, 0x07, 0x02,       /* call 0x0207      SLOW/FAST: test CDFLAG bit 6 to set mode (uses hl, a, b) */
+    0xfd, 0x36, 0x01, 0x80, /* ld (iy+001h),080h  Load FLAGS,$80 */
     0x2a, 0x29, 0x40,       /* ld hl,(NXTLIN)   Address of next line to interpret */
+    0x46,                   /* ld b,(hl) */
+    0x23,                   /* inc hl */
+    0x4e,                   /* ld c,(hl) */
+    0xed, 0x43, 0x07, 0x40, /* ld (PPC),bc      Set line number of statement being executed */
+    0x2b,                   /* dec hl           Back to (NXTLIN) */
+    /* Start BASIC interpreter */
+    /* 0x2a, 0x29, 0x40,       /* ld hl,(NXTLIN)   Address of next line to interpret */
     0xc3, 0x6c, 0x06        /* jp 0x066c        This sets NXTLIN to hl */
 };
 
