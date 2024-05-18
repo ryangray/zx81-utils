@@ -45,7 +45,8 @@ di
 ld a,0x1e
 ld i,a
 im 1                ; Interrupt mode 1
-ld iy,0x4000        ; Set index to start of RAM
+ld iy,0x4000        ; Set index to start of RAM (even if you don't use iy here!)
+ld (iy+001h),080h   ; Load FLAGS with $80
 
 ; Copy first program block
 ld hl,(PROG1S); Get block source from rom
@@ -72,17 +73,16 @@ ld sp,hl            ; Point sp just below that
 call CURSOR_IN      ; ROM: sets up lower screen to 2 lines and clear calc stack (uses hl)
 call SLOW_FAST      ; ROM: test CDFLAG bit 6 to set mode (uses hl, a, b)
 
-; System vars that didn't get set from the P file data
-ld (iy+001h),080h   ; Load FLAGS with $80
-ld hl,(NXTLIN)
-ld b,(hl)
+; Set up the auto run
+ld hl,(NXTLIN)      ; NEXT_LINE routine wants NXTLIN in hl
+ld b,(hl)           ; But need to set PPC with the line number
 inc hl
 ld c,(hl)
-ld (PPC),bc         ; Set line number of statement being executed
+ld (PPC),bc
 dec hl
 
 ; Start BASIC
-jp NEXT_LINE        ; ROM: Jump into basic
+jp NEXT_LINE        ; ROM: Jump into basic at address in hl
 
 ; Loader variables
 ; I don't include these in the loader code arrays and assume they follow it. I
