@@ -39,7 +39,7 @@ test/hitch-h-p2txt-z.bas: p2txt
 test/hitch-h-p2txt-r.txt: p2txt
 	./p2txt -r hitch-h.p > test/hitch-h-p2txt-r.txt
 
-p2t-test1: TEST1-p2txt-r TEST1-p2txt-1 TEST1-p2txt-z TEST1-p2txt-2
+p2t-test1: test/TEST1-p2txt-r.txt test/TEST1-p2txt-1.txt test/TEST1-p2txt-z.txt test/TEST1-p2txt-2.txt
 
 # TEST1.bas -> zmakebas -> test/TEST1.p -> p2txt -z -> TEST1-p2txt-z.txt -> zmakebas
 # -> TEST1-p2txt-z.p (compare to test/TEST1.p)
@@ -51,44 +51,44 @@ p2t-test1: TEST1-p2txt-r TEST1-p2txt-1 TEST1-p2txt-z TEST1-p2txt-2
 test/%.p: %.bas
 	zmakebas -p -n $* -o $@ $<
 
-TEST1-p2txt-r: p2txt test/TEST1.p
+test/TEST1-p2txt-r.txt: p2txt test/TEST1.p
 	./p2txt -r test/TEST1.p > test/TEST1-p2txt-r.txt
 	git diff test/TEST1-p2txt-r.txt
 
-TEST1-p2txt-1: p2txt test/TEST1.p
+test/TEST1-p2txt-1.txt: p2txt test/TEST1.p
 	./p2txt -1 test/TEST1.p > test/TEST1-p2txt-1.txt
 
-TEST1-p2txt-z: p2txt test/TEST1.p
+test/TEST1-p2txt-z.txt: p2txt test/TEST1.p
 	./p2txt -z test/TEST1.p > test/TEST1-p2txt-z.txt
 	zmakebas -p -o test/TEST1-p2txt-z.p test/TEST1-p2txt-z.txt
 	diff test/TEST1.p test/TEST1-p2txt-z.p
 
-TEST1-p2txt-2: p2txt test/TEST1.p
+test/TEST1-p2txt-2.txt: p2txt test/TEST1.p
 	./p2txt -2 test/TEST1.p > test/TEST1-p2txt-2.txt
 
-p2speccy-all: p2speccy p2s-test1 p2s-test2
+p2speccy-all: p2speccy p2s-test1 test/TEST2-p2speccy.txt
 
 p2speccy: p2speccy.o
 
-p2s-test1: TEST1-p2speccy-r TEST1-p2speccy-z TEST1-p2speccy-tap
+p2s-test1: test/TEST1-p2speccy-r.txt test/TEST1-p2speccy-z.bas test/TEST1-p2speccy.tap
 
-p2s-test2: p2speccy test/TEST2.p
+test/TEST2-p2speccy.txt: p2speccy test/TEST2.p
 	./p2speccy -z test/TEST2.p > test/TEST2-p2speccy.txt
 
-TEST1-p2speccy-z: p2speccy test/TEST1.p
-	./p2speccy -z test/TEST1.p > test/TEST1-p2speccy-z.txt
+test/TEST1-p2speccy-z.bas: p2speccy test/TEST1.p
+	./p2speccy -z test/TEST1.p > test/TEST1-p2speccy-z.bas
 
-TEST1-p2speccy-r: p2speccy test/TEST1.p
+test/TEST1-p2speccy-r.txt: p2speccy test/TEST1.p
 	./p2speccy -r test/TEST1.p > test/TEST1-p2speccy-r.txt
 
-TEST1-p2speccy-tap: test/TEST1-p2speccy-z.txt
-	zmakebas -n TEST1 -o test/TEST1-p2speccy.tap test/TEST1-p2speccy-z.txt
+test/TEST1-p2speccy.tap: test/TEST1-p2speccy-z.bas
+	zmakebas -n TEST1 -o test/TEST1-p2speccy.tap test/TEST1-p2speccy-z.bas
 
-hex2rem-all: hex2rem hex2rem-test1
+hex2rem-all: hex2rem test/hex2rem.bas
 
 hex2rem: hex2rem.o
 
-hex2rem-test1: hex2rem
+test/hex2rem.bas: hex2rem
 	./hex2rem -h hex2rem.txt > test/hex2rem.bas
 
 rem2bin-all: rem2bin rem2bin-test
@@ -122,7 +122,7 @@ tap0auto-all: tap0auto
 
 tap0auto: tap0auto.o
 
-p2ts1510-all: p2ts1510 p2ts1510-loader p2ts1510-loader-tape p2ts1510-test
+p2ts1510-all: p2ts1510 p2ts1510-loader p2ts1510-loader-tape p2ts1510-test1
 
 p2ts1510: p2ts1510.o
 
@@ -130,9 +130,12 @@ p2ts1510-loader: p2ts1510_loader.bin
 
 p2ts1510-loader-tape: p2ts1510_loader-tape.bin
 
-p2ts1510-test: p2ts1510 hello.p
-	./p2ts1510 hello.p
+p2ts1510-test1: test/hello-p2ts1510-t.rom test/hello-p2ts1510-s.rom
+
+test/hello-p2ts1510-t.rom: p2ts1510 hello.p
 	./p2ts1510 -t -o test/hello-p2ts1510-t.rom hello.p
+
+test/hello-p2ts1510-s.rom: p2ts1510 hello.p
 	./p2ts1510 -o test/hello-p2ts1510-s.rom hello.p
 
 .PHONY: clean install-home
