@@ -1,3 +1,11 @@
+2024-05-23 ryangray
+    * Fixed tape-like loader for TS1500 as I'd left out setting some things:
+    * Forgot to set IY to 0x4000
+    * Wasn't putting 0x3e at RAMTOP-1
+    * Wasn't setting SP to RAMTOP-2
+    * Don't need to set PPC as call to NEXT-LINE routine will
+    * The prog-var loader is 207 bytes, and the tape-like loader is 73 bytes
+
 2024-04-19 ryangray
     * Trying to organize the test cases files, putting generated files in test/
       and leaving source files in the main folder for now. All the test products

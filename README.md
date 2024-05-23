@@ -497,9 +497,17 @@ Options:
   with the standard output. To redirect it, use `p2ts1510 ... 2>file`.
 
 * `-t` - Use the tape-like loader which will load all of the P file contents,
-  which includes most all of the system variables, the program, the display
-  file, and the variables. This ignores the `-v` option.
- 
+  which includes most all of the system variables (116 bytes), the program, the 
+  display file (793 bytes full, 25 collapsed), and the variables. This loader 
+  ignores the `-v` option. 
+
+  This loader should be extremely compatible with most any program, and works on
+  those that do things like checksum the system variables on load like VU-CALC
+  does. The loader is only 73 bytes as opposed to the standard loader of 207 
+  bytes. However, the system variables and display file make it use 659 bytes 
+  more overall. In some cases, this could make the difference in needing a 16K 
+  ROM versus just an 8K ROM, so you could try the standard loader.
+
 The cartridge ROM will autorun on startup on a TS1500, but on a ZX81 or 
 TS1000, you will have to give the command `RAND USR 8192` to start the ROM
 loader.

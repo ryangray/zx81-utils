@@ -75,12 +75,6 @@ call SLOW_FAST      ; ROM: test CDFLAG bit 6 to set mode (uses hl, a, b)
 
 ; Set up the auto run
 ld hl,(NXTLIN)      ; NEXT_LINE routine wants NXTLIN in hl
-ld b,(hl)           ; But need to set PPC with the line number
-inc hl
-ld c,(hl)
-ld (PPC),bc
-dec hl
-
 ; Start BASIC
 jp NEXT_LINE        ; ROM: Jump into basic at address in hl
 
