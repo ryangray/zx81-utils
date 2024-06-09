@@ -1,4 +1,4 @@
-/* tap0auto
+/* tapauto
  * By Ryan Gray
  * June 2024
  * 
@@ -41,10 +41,10 @@ int blockNum = -1;
 
 void printUsage()
 {
-    printf("tap0auto %s - by Ryan Gray\n", VERSION);
+    printf("tapauto %s - by Ryan Gray\n", VERSION);
 
-    printf("Usage: tap0auto [-i] [-a num] [-b num | -f num] input_file output_file\n");
-    printf("       tap0auto -?          Print this help.\n");
+    printf("Usage: tapauto [-i] [-a num] [-b num | -f num] input_file output_file\n");
+    printf("       tapauto -?           Print this help.\n");
     printf("Options: -i                 Only print info about the autostart\n");
     printf("         -a line_number     Set the autostart line number (-1=none, the default)\n");
     printf("         -b block_number    Block number to modify (>=0, default=1st prog).\n");
