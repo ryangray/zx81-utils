@@ -11,7 +11,7 @@ else
 	CFLAGS = -Wall -I$(IDIR)
 endif
 
-all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all tap0auto-all p2ts1510-all
+all: p2txt-all p2speccy-all hex2rem-all rem2bin-all hex2tap-all tapauto-all p2ts1510-all
 
 .PHONY: all
 
@@ -118,9 +118,9 @@ test/pictest.tap: test/pic.tap
 pictest-demo: test/pictest.tap
 	fuse --auto-load test/pictest.tap &
 
-tap0auto-all: tap0auto
+tapauto-all: tapauto
 
-tap0auto: tap0auto.o
+tapauto: tapauto.o
 
 p2ts1510-all: p2ts1510 p2ts1510-loader p2ts1510-loader-tape p2ts1510-test1
 

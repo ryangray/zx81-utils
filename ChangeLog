@@ -1,3 +1,7 @@
+2024-06-09 ryangray
+    * Enhance tap0auto to report autorun as well as set it to any value. You can
+      also specify a program by block or file number to report or set.
+    * Renamed tap0auto to just tapauto.
 2024-05-23 ryangray
     * Fixed tape-like loader for TS1500 as I'd left out setting some things:
     * Forgot to set IY to 0x4000
