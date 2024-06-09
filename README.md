@@ -11,7 +11,7 @@ options. Other utilities have been added.
 * [`rem2bin`](#rem2bin) - Extract machine code in line 1 REM to a file
 * [`hex2tap`](#hex2tap) - Convert hex or binary file to a Spectrum CODE block in
   a tap file.
-* [`tap0auto`](#tap0auto) - Disable BASIC program auto run in a tap file
+* [`tapauto`](#tapauto) - Disable BASIC program auto run in a tap file
 * [`p2ts1510`](#p2ts1510) - Convert a program in a P file to a ROM file for a
   TS1510 cartridge adapter.
 
@@ -413,16 +413,25 @@ hex2tap -b -a SCR $*
 Then you can just use: `scr2tap -n pic -o pic.tap pic.scr`
 
 
-# tap0auto
+# tapauto
 
-Yet another ZX Spectrum/TS2068 utility. This will take in a tap file and output
-the same contents to the output but with the auto run feature turned off for all
-the BASIC programs in the tap file.
+Yet another ZX Spectrum/TS2068 utility. This will show or set the autorun for
+programs in a .tap file.
 
 ## Usage
 
-    tap0auto input_file output_file
-    tap0auto -?
+    tapauto [-i] [-a num] [-b num | -f num] input_file output_file
+    tapauto -?                  Print this help.
+    Options: -i                 Only print info about the autostart
+             -a line_number     Set the autostart line number (-1=none, the default)
+             -b block_number    Block number to modify (>=0, default=1st prog).
+             -f file_number     File number to modify (>=1, default=1st prog).
+
+Only one program will be modified if a block or file is specified or if autorun
+is being turned on. If a block or file is not specified and autorun is being
+turned off, then it will be turned off for all program files. File numbers start
+at 1, each composed of two blocks, which start at 0 with even values as the
+headers. The input and output files name can be given as - to use standard I/O.
 
 This only works on .tap files, so if you have a .tzx file, you need to convert
 it to a .tap file. `tzxtap` from the [tzxtools][] can be used for this.
@@ -431,7 +440,7 @@ it to a .tap file. `tzxtap` from the [tzxtools][] can be used for this.
 standard output, respectively. So, you could pipe the output of `tzxtap` to
 process a .tzx file with:
 
-    tzxtap foo.tzx | tap0auto - foo.tap
+    tzxtap foo.tzx | tapauto - foo.tap
 
 
 # p2ts1510
@@ -451,7 +460,7 @@ custom 1510 ROMs.
 
 [EightyOne]: https://sourceforge.net/projects/eightyone-sinclair-emulator/
 
-## Usage
+# Usage
 
     p2ts1510 [options] [input_file]
 

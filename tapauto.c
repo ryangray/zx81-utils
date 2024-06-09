@@ -49,9 +49,11 @@ void printUsage()
     printf("         -a line_number     Set the autostart line number (-1=none, the default)\n");
     printf("         -b block_number    Block number to modify (>=0, default=1st prog).\n");
     printf("         -f file_number     File number to modify (>=1, default=1st prog).\n");
-    printf("Only one program will be modified. File numbers start at 1, each composed of\n");
-    printf("two blocks, which start at 0 with even values as the headers. The input and\n");
-    printf("output files name can be given as - to use standard input and output.\n");
+    printf("Only one program will be modified if a block or file is specified or if autorun\n");
+    printf("is being turned on. If a block or file is not specified and autorun is being\n");
+    printf("turned off, then it will be turned off for all program files. File numbers start\n");
+    printf("at 1, each composed of two blocks, which start at 0 with even values as the\n");
+    printf("headers. The input and output files name can be given as - to use standard I/O.\n");
 }
 
 
@@ -192,7 +194,7 @@ void setupInputOutput ()
 
 void processFile ()
 {
-    int f, chk, autoline, done = 0;
+    int f, chk, autoline, done = 0, gotProg = 0;
     int l, h, c, blen, bnum = -1, tnum = 0;
     char fname[11] = "          ";
 
@@ -275,7 +277,10 @@ void processFile ()
                         printf("Blocks: %d, %d  Program: '%s'  Autorun now line: %d\n", bnum, bnum+1, fname, autorun);
                         }
                     }
-                done = 1; /* Got at least one program file */
+                gotProg = 1; /* Got at least one program file */
+                if ((blockNum >= 0 && blockNum == bnum) /* Only mod specific program */
+                    || (autorun >= 0)) /* Set only the first if line given but no block or file specified. */
+                    done = 1; /* Setting -a -1 with no block or file specified will disable autorun on all. */
                 }
             }
         if (!infoOnly)
@@ -327,7 +332,7 @@ void processFile ()
         fprintf(stderr, "Block %d was not found\n", blockNum);
         errorExit(EXIT_FAILURE);
         }
-    if (!done)
+    if (!gotProg)
         {
         fprintf(stderr, "A program file was not found.\n");
         errorExit(EXIT_FAILURE);
