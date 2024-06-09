@@ -1,10 +1,9 @@
 /* tap0auto
  * By Ryan Gray
- * December 2023
+ * June 2024
  * 
- * This takes a .tap file and changes each program contained within to not 
- * autorun when loaded (the old autorun line number is printed for reference).
- * Currenty, all programs in the tap file are changed.
+ * This takes a .tap file and shows or changes the autorun value of a program
+ * file contained within.
  */
 
 #include <stdio.h>
@@ -12,7 +11,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-#define VERSION "1.0.1"
+#define VERSION "1.1"
 
 #ifdef __MSDOS__
 #define STRCMPI strcmpi
@@ -20,23 +19,46 @@
 #define STRCMPI strcasecmp
 #endif
 
+typedef unsigned char  BYTE;     /* Holds a one-byte value natively */
+typedef unsigned short ADDR;     /* Holds a two-byte value natively (may not be little-endian) */
+
+/* TAP file block and file types */
+#define TAP_HEADER 0x00
+#define TAP_BODY   0xFF
+#define TAP_PROG   0x00
+#define TAP_NUM    0x01
+#define TAP_CHAR   0x02
+#define TAP_CODE   0x03
+
 char *infile  = "";
-char *outfile = ""; /* Base name if multiple segments are selected */
-char *outname; /* Full output filename including a version number */
-char header[19]; /* For reading tap header blocks (not including two block length bytes) */
+char *outfile = "";
+unsigned char header[19];   /* For reading tap header blocks */
 FILE *in, *out;
+int autorun = -1;
+int infoOnly = 0;
+int blockNum = -1;
+
 
 void printUsage()
 {
     printf("tap0auto %s - by Ryan Gray\n", VERSION);
 
-    printf("Usage: tap0auto input_file output_file\n");
+    printf("Usage: tap0auto [-i] [-a num] [-b num | -f num] input_file output_file\n");
     printf("       tap0auto -?          Print this help.\n");
+    printf("Options: -i                 Only print info about the autostart\n");
+    printf("         -a line_number     Set the autostart line number (-1=none, the default)\n");
+    printf("         -b block_number    Block number to modify (>=0, default=1st prog).\n");
+    printf("         -f file_number     File number to modify (>=1, default=1st prog).\n");
+    printf("Only one program will be modified. File numbers start at 1, each composed of\n");
+    printf("two blocks, which start at 0 with even values as the headers. The input and\n");
+    printf("output files name can be given as - to use standard input and output.\n");
 }
 
 
 void parseOptions(int argc, char *argv[])
 {
+    char *aptr;
+
     while ((argc > 1) && (argv[1][0] == '-'))
         {
         switch (argv[1][1])
@@ -44,6 +66,26 @@ void parseOptions(int argc, char *argv[])
             case '?':
                 printUsage();
                 exit(EXIT_SUCCESS);
+            case 'a':
+                aptr = argv[2] + strlen(argv[2]) - 1;
+                autorun = (unsigned int)strtoul(argv[2], &aptr, 0);
+                ++argv;
+                --argc;
+                break;
+            case 'b':
+            case 'f':
+                aptr = argv[2] + strlen(argv[2]) - 1;
+                blockNum = (unsigned int)strtoul(argv[2], &aptr, 0);
+                if (argv[1][1] == 'f')
+                    blockNum = 2 * (blockNum - 1);
+                if (blockNum % 2)
+                    blockNum--; /* Move odd block numbers down one to point at their header */
+                ++argv;
+                --argc;
+                break;
+            case 'i':
+                infoOnly = 1;
+                break;
             default:
                 if (strcmp(infile,"") == 0)
                     {
@@ -76,7 +118,7 @@ void parseOptions(int argc, char *argv[])
             --argc;
             }
         }
-    if (strcmp(outfile,"") == 0)
+    if (strcmp(outfile,"") == 0 && !infoOnly)
         {
         if (argc <= 1)
             {
@@ -91,45 +133,31 @@ void parseOptions(int argc, char *argv[])
 }
 
 
-void unexpectedEOF ()
+void cleanup ()
 {
-    fprintf(stderr, "Unexpected end of file.\n");
+    if (out && out != stdout)
+    	fclose(out);
+    if (in && in != stdin)
+        fclose(in);
+}
+
+
+void errorExit ()
+{
+    cleanup();
     exit(EXIT_FAILURE);
 }
 
 
-int readHeader ()
+void unexpectedEOF (int bnum)
 {
-    /* Read the 18 bytes of a tap header block after the two bytes of block
-    length and 1 byte of block type into header[]. This includes the check byte */
-
-    int b;
-    int n = 0;
-
-    while (!feof(in) && n < 18)
-        {
-        if ((b = fgetc(in)) == EOF)
-            {
-            unexpectedEOF();
-            }
-        else
-            {
-            header[n] = b;
-            n++;
-            }
-        }
-    return n;
+    fprintf(stderr, "Unexpected end of file. Block %d\n", bnum);
+    errorExit();
 }
 
 
-int main (int argc, char *argv[])
+void setupInputOutput ()
 {
-    int f, chk, autoline;
-    int l, h, c, blen, bnum, tnum = 0;
-    char fname[11] = "          ";
-
-    parseOptions(argc, argv);
-
     if ( strcmp(infile,"-") == 0 )
 
         in = stdin;
@@ -144,102 +172,175 @@ int main (int argc, char *argv[])
             }
         }
 
-    if (strcmp(outfile, "-") == 0 || strcmp(outfile,"") == 0)
-    
+    if (strcmp(outfile, "-") == 0 || strcmp(outfile,"") == 0 || infoOnly)
+        {
         out = stdout;
-        
+        }
     else
         {
         out = fopen(outfile, "wb");
         if (out == NULL)
             {
             fprintf(stderr, "Couldn't open output file.\n");
+            if (in != stdin)
+                fclose(in);
             exit(EXIT_FAILURE);
             }
         }
+}
+
+
+void processFile ()
+{
+    int f, chk, autoline, done = 0;
+    int l, h, c, blen, bnum = -1, tnum = 0;
+    char fname[11] = "          ";
 
     /* Read through tap file segments */
 
     while ((l = fgetc(in)) != EOF)
         {
         if ((h = fgetc(in)) == EOF)
-            unexpectedEOF();
+            unexpectedEOF(bnum);
         blen = l + 256 * h; /* Includes block type byte and check byte */
         bnum = tnum*2; /* Current tap block number */
         tnum++; /* Curent tap segment number */
         if (blen != 19)
             {
             fprintf(stderr,"Expected a 19 byte block %d for a header block\n", bnum);
-            exit(EXIT_FAILURE);
+            errorExit(EXIT_FAILURE);
             }
         /* Block type */
         if ((c = fgetc(in)) == EOF)
-            unexpectedEOF();
+            unexpectedEOF(bnum);
         if (c != 0x00)
             {
             fprintf(stderr,"Block %d doesn't appear to be a header block\n", bnum);
-            exit(EXIT_FAILURE);
+            errorExit(EXIT_FAILURE);
+            if (c != 0xFF)
+                {
+                fprintf(stderr,"Block %d doesn't appear to be a body block\n", bnum);
+                errorExit(EXIT_FAILURE);
+                }
             }
-        readHeader(); /* Includes check byte but not block length (2 bytes and block type (1 byte) */
+        /* Load rest of the header */
+        for (f = 0; !feof(in) && f < 18; f++)
+            {
+            if ((c = fgetc(in)) == EOF)
+                unexpectedEOF(bnum);
+            header[f] = c;
+            }
         /* Grab file name */
         memcpy(fname, header+1, 10);
 
-        if (header[0] == 0)
+        if ((blockNum < 0 || blockNum == bnum) &&   /* A block we are interested in */
+            (infoOnly || !done))                    /* Printing info or not already done our mod */
             {
-            /* Program file, check for autorun and adjust */
-            autoline = header[13] + 256 * header[14];
-            if (autoline != 0)
+            if (header[0] != TAP_PROG)              /* Not a program file */
                 {
-                /* Set to 32768 to turn off autorun */
-                header[13] = 0x00;
-                header[14] = 0x80;
-                printf("Block: %d, Program: '%s', autorun line: %d\n", bnum, fname, autoline);
+                if (blockNum >= 0 && blockNum == bnum)
+                    {
+                    fprintf(stderr, "Specified block %d is not a program block.\n", blockNum);
+                    errorExit();
+                    }
+                }
+            else                                    /* A program file */
+                {
+                /* Check for autorun and adjust */
+                autoline = header[13] + 256 * header[14];
+                printf("Blocks: %d, %d  Program: '%s'  Autorun ", bnum, bnum+1, fname);
+                if (infoOnly)
+                    printf("is ");
+                else
+                    printf("was ");
+
+                if (autoline & 0x8000)
+                    printf("disabled.\n");
+                else
+                    printf("line: %d\n", autoline);
+                
+                if (!infoOnly)
+                    {
+                    if (autorun == -1)
+                        {
+                        /* Set to 32768 to turn off autorun */
+                        header[13] = 0x00;
+                        header[14] = 0x80;
+                        printf("Blocks: %d, %d  Program: '%s'  Autorun now disabled.\n", bnum, bnum+1, fname);
+                        }
+                    else
+                        {
+                        header[13] = autorun & 255;
+                        header[14] = autorun >> 8;
+                        printf("Blocks: %d, %d  Program: '%s'  Autorun now line: %d\n", bnum, bnum+1, fname, autorun);
+                        }
+                    }
+                done = 1; /* Got at least one program file */
                 }
             }
-        /* write header block */
-
-        fprintf(out, "%c%c%c", 19, 0, 0); /* Header block length is 19 (19,0), 0=header block */
-        fputc(header[0], out); /* File type */
-        chk = header[0]; /* Re-compute check byte in case autorun was turned off */
-        for (f = 1; f < 17; f++)
+        if (!infoOnly)
             {
-            fputc(header[f], out);
-            chk ^= header[f];
+            /* Write (possibly modified) header block */
+            fprintf(out, "%c%c%c", 19, 0, 0); /* Header block length is 19 (19,0), 0=header block */
+            fputc(header[0], out); /* File type */
+            chk = header[0]; /* Re-compute check byte in case autorun was turned off */
+            for (f = 1; f < 17; f++)
+                {
+                fputc(header[f], out);
+                chk ^= header[f];
+                }
+            fputc(chk, out); /* Check byte */
             }
-        fputc(chk, out); /* Check byte */
 
-        /* pass-through the data block */
+        /* Pass-through the data block */
 
         /* Read block length */
         bnum++;
         if ((l = fgetc(in)) == EOF)
-            unexpectedEOF();
+            unexpectedEOF(bnum);
         if ((h = fgetc(in)) == EOF)
-            unexpectedEOF();
+            unexpectedEOF(bnum);
         blen = l + 256 * h; /* Includes block type byte and check byte */
         /* Block type should be a data block */
         if ((c = fgetc(in)) == EOF)
-            unexpectedEOF();
+            unexpectedEOF(bnum);
         if (c != 0xFF)
             {
             fprintf(stderr, "Expected block %d to be a data block for '%s'\n", bnum, fname);
-            exit(EXIT_FAILURE);
+            errorExit(EXIT_FAILURE);
             }
         
         /* Length lo/hi, 0xFF=data*/
-        fprintf(out, "%c%c%c", blen & 255, blen >> 8, 0xFF);
+        if (!infoOnly)
+            fprintf(out, "%c%c%c", blen & 255, blen >> 8, 0xFF);
         for (f = 0; f < blen - 1; f++)
             {
             if ((c = fgetc(in)) == EOF)
-                unexpectedEOF();
-            fputc(c, out);
+                unexpectedEOF(bnum);
+            if (!infoOnly)
+                fputc(c, out);
             }
         }
+    
+    if (blockNum > bnum) /* If a block num was specified and not found */
+        {
+        fprintf(stderr, "Block %d was not found\n", blockNum);
+        errorExit(EXIT_FAILURE);
+        }
+    if (!done)
+        {
+        fprintf(stderr, "A program file was not found.\n");
+        errorExit(EXIT_FAILURE);
+        }
+}
 
-    if (out != stdout)
-    	fclose(out);
-    if (in != stdin)
-        fclose(in);
+
+int main (int argc, char *argv[])
+{
+    parseOptions(argc, argv);
+    setupInputOutput();
+    processFile();
+    cleanup();
 
     return 0;
 }
