@@ -60,7 +60,7 @@ char *outname = NULL;
 char *outext;
 char *outroot;
 int includeVars = 1; /* Some programs need vars, so we default to include */
-int autorun = 10000; /* 10000=Use the setting in the P file, <0=disable, >=0=set*/
+int autorun = 32768; /* >=32768 Use the setting in the P file, <0=disable, >=0=set */
 int shortRomFile = 0;
 int oneRom = 1;
 int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
@@ -459,7 +459,7 @@ void writeROM(FILE *out, int endRom)
         if (infoOnly)
             fprintf(stderr, " (not written)\n");
         else
-            fprintf(stderr,"\n");
+            fprintf(stderr," written\n");
         }
     if (!infoOnly)
         {
@@ -556,7 +556,7 @@ void printLine (FILE* f, ADDR lineAddr)
     len = dpeek(lineAddr+2);
     len = len < 256 ? len : 256; /* Limit length */
     end = x + 4 + len;
-    fprintf(f, "  %4d", lineNum(buff[x], buff[x+1]));
+    fprintf(f, " %5d", lineNum(buff[x], buff[x+1]));
     for (x += 4; x < end; x++)
         {
         c = buff[x];
@@ -781,7 +781,7 @@ int main (int argc, char *argv[])
         b1 = peek(nxtlin);
         b2 = peek(nxtlin+1);
         c = lineNum(b1, b2);
-        fprintf(stderr, "Autorun line: %d\n", c);
+        fprintf(stderr, "Autorun line: %5d\n", c);
         fprintf(stderr, "Autorun code:");
         printLine(stderr, nxtlin);
         }
@@ -938,7 +938,7 @@ int main (int argc, char *argv[])
             dpoke(CH_ADD, autoaddr-1);
             }
         }
-    else if (0 <= autorun && autorun < 10000) /* Autorun line set by '-a' option */
+    else if (0 <= autorun && autorun < 32768) /* Autorun line set by '-a' option */
         {
         /* f points to the autorun line or the next line */
         f = findLine(autorun);
@@ -1027,7 +1027,7 @@ int main (int argc, char *argv[])
         /* Do some sanity checks as some P files have issues */
         if (autoline > 9999)
             {
-            fprintf(stderr,"Warning: autorun line number %d is out of range.\n", autoline);
+            fprintf(stderr,"Warning: autorun line number %d is out of normal range.\n", autoline);
             autorun_warn = 1;
             }
         if (f + SYSSAVE < PROGRAM || f + SYSSAVE > PROGRAM + prog_size)
@@ -1102,7 +1102,7 @@ int main (int argc, char *argv[])
         }
     else
         {
-        fprintf(stderr, "Autorun line: %d\n", autoline);
+        fprintf(stderr, "Autorun line: %5d\n", autoline);
         /* Print the line that will be autorun */
         fprintf(stderr, "Autorun code:");
         printLine(stderr, autoaddr);
@@ -1160,7 +1160,6 @@ int main (int argc, char *argv[])
                     cleanup();
                     exit(EXIT_FAILURE);
                     }
-                fprintf(stderr, "Writing: %s\n", outname);
                 }
             }
         /* Write prog 2 block to rom */
@@ -1204,7 +1203,6 @@ int main (int argc, char *argv[])
                         cleanup();
                         exit(EXIT_FAILURE);
                         }
-                    fprintf(stderr, "Writing: %s\n", outname);
                     }
                 }
             /* Write vars 2 block to rom */
