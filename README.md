@@ -477,7 +477,11 @@ Options:
   the output is stdout, then it is the equivalent of using the `-1` option.
 
 * `-v` - The default is to include the variables from the P file. This option
-  will cause the variables data to not be included.
+  will cause the variables data to not be included. This only applies to the 
+  prog+vars loader (-p) and not the tape-like loader (-t) currently. A future
+  release might add the option for it to apply to the tape-like loader, but that
+  could cause some programs to not work if they either need the variables, or if
+  they are like VU-CALC and do a checksum of the system variables.
 
 * `-a line_number` - Force the auto run line number. The default is to use
   whatever the P file has, which could be no auto run. You can use `-1` to force
@@ -508,7 +512,7 @@ Options:
 * `-t` - Use the tape-like loader which will load all of the P file contents,
   which includes most all of the system variables (116 bytes), the program, the 
   display file (793 bytes full, 25 collapsed), and the variables. This loader 
-  ignores the `-v` option. 
+  ignores the `-v` option and is the default loader. 
 
   This loader should be extremely compatible with most any program, and works on
   those that do things like checksum the system variables on load like VU-CALC
@@ -516,6 +520,22 @@ Options:
   bytes. However, the system variables and display file make it use 659 bytes 
   more overall. In some cases, this could make the difference in needing a 16K 
   ROM versus just an 8K ROM, so you could try the standard loader.
+
+  Note that this loader also skips clearing the memory since it writes the 
+  system variables and over all the other memory we care about, and this seems
+  to be fine even on a TS1500 that doesn't do this init before loading a 
+  cartridge ROM. If a program doesn't seem to work with this, you can try the
+  prog+vars loader with option -p.
+
+* `-p` - Use the prog+vars loader which is a generalized version of the original
+  Timex ROM cartridge loaders. It only stores the program and optionally the 
+  variables in the ROM (-v switch). It clears RAM and generates a display file
+  when loading the program. This doesn't work for a number of programs that rely
+  on certain system variables. The total size with this loader is slightly 
+  smaller by 659 bytes, so if the program is near the max size, you might have 
+  to use this loader to fit in 16K. However, if the P file has variables you
+  don't need, you can use this loader with the -v option to leave out the 
+  variables data to have a smaller ROM size.
 
 The cartridge ROM will autorun on startup on a TS1500, but on a ZX81 or 
 TS1000, you will have to give the command `RAND USR 8192` to start the ROM
