@@ -607,7 +607,7 @@ int main (int argc, char *argv[])
         }
     else
         {
-        in = fopen(infile, "r");
+        in = fopen(infile, "rb");
         if ( in == NULL )
             {
             fprintf(stderr, "Error: couldn't open file '%s'\n", infile);
@@ -1042,7 +1042,7 @@ int main (int argc, char *argv[])
         else if (buff[f-1] != NEWLINE)
             {
             fprintf(stderr,"Warning: Autorun address may be bad or P file corrupt.\n");
-            fprintf(stderr,"         Byte before this address should be a newline.\n");
+            fprintf(stderr,"         Byte before this address normally is a newline.\n");
             autorun_warn = 1;
             }
         else
@@ -1120,7 +1120,7 @@ int main (int argc, char *argv[])
         strcat(outname, outext);
         if (!infoOnly)
             {
-            out = fopen(outname, "w");
+            out = fopen(outname, "wb");
             if ( out == NULL )
                 {
                 fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
@@ -1153,7 +1153,7 @@ int main (int argc, char *argv[])
             if (!infoOnly)
                 {
                 fclose(out);
-                out = fopen(outname,"w");
+                out = fopen(outname,"wb");
                 if (out == NULL)
                     {
                     fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
@@ -1196,7 +1196,7 @@ int main (int argc, char *argv[])
                 else
                     {
                     fclose(out);
-                    out = fopen(outname,"w");
+                    out = fopen(outname,"wb");
                     if ( out == NULL )
                         {
                         fprintf(stderr, "Error: couldn't write output file '%s'\n", outname);
