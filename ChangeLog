@@ -1,3 +1,8 @@
+2024-12-26 ryangray
+    * Add setting null terminator after strncpy for outfile name
+    * Fix using '-' to specify stdin
+    * Fix output of filename when using stdout
+
 2024-12-25 ryangray
     * Fix to open files in binary mode, so was only working on unix-like OSes.
     * Make tape-like loader (-t) the default, and add (-p) switch for selecting

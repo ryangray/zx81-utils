@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VERSION "1.0.5"
+#define VERSION "1.0.6"
 
 #define ROM8K 8192      /* 8K buffer size for making the ROM images */
 #define BUFFSZ 16384    /* Buffer size for P file */
@@ -57,8 +57,8 @@ char *infile = "";
 char *outfile = "";
 char *outfile_malloc = NULL;
 char *outname = NULL;
-char *outext;
-char *outroot;
+char *outext = NULL;
+char *outroot = NULL;
 int includeVars = 1; /* Some programs need vars, so we default to include */
 int autorun = 32768; /* >=32768 Use the setting in the P file, <0=disable, >=0=set */
 int shortRomFile = 0;
@@ -365,8 +365,8 @@ void printUsage ()
     printf("  -o outfile  Give the name of the output file rather than using the default.\n");
     printf("  -a line     Will set the autorun line number. Negative to disable autorun.\n");
     printf("  -s          Output short ROM files that are not padded to 8K boundaries.\n");
-    printf("  -1          Output only a single ROM file (the default).\n");
-    printf("  -2          Output separate (two or more) ROM files.\n");
+    printf("  -1          Output all in a single ROM file (the default).\n");
+    printf("  -2          Output multiple 8K ROM files named with '_A', '_B', etc.\n");
     printf("  -i          Print the P file and block info but don't output the ROMs.\n");
     printf("  -p          Use prog+vars loader: no sys vars or display file.\n");
     printf("  -t          Use tape-like loader: includes sys vars & display (default).\n");
@@ -374,7 +374,6 @@ void printUsage ()
     printf("The default output file name is taken from the input file name.\n");
     printf("The input can be standard input or you can give '-' as the file name.\n");
     printf("The output can be standard input or you can give '-' as the file name.\n");
-    printf("Programs requiring more than one 8K ROM will have '_A', etc. added to the name.\n");
 }
 
 
@@ -386,6 +385,8 @@ void parseOptions (int argc, char *argv[])
         {
         switch (argv[1][1])
             {
+            case '\0':
+                break;
             case '1':
                 oneRom = 1;
                 break;
@@ -458,7 +459,11 @@ void writeROM(FILE *out, int endRom)
         len = ROM8K;
     if (endRom)
         {
-        fprintf(stderr, "ROM : %s\nSize: %d ($%04x) bytes", outname, prevRomSize + len, prevRomSize + len);
+        if (out==stdout)
+            fprintf(stderr, "ROM : (stdout)\n");
+        else
+            fprintf(stderr, "ROM : %s\n", outname);
+        fprintf(stderr, "Size: %d ($%04x) bytes", prevRomSize + len, prevRomSize + len);
         if (infoOnly)
             fprintf(stderr, " (not written)\n");
         else
@@ -634,6 +639,7 @@ int main (int argc, char *argv[])
             outfile_malloc = malloc(f+4+1);
             outfile = outfile_malloc;
             strncpy(outfile,infile,f);
+            outfile[f] = '\0';
             outext = ".rom";
             strcat(outfile,outext);
             }
@@ -662,6 +668,7 @@ int main (int argc, char *argv[])
             }
         outroot = malloc(b1+b2+2+1); /* Allow for "_A" and "_B" additions */
         strncpy(outroot, outfile, b1);
+        outroot[b1] = '\0';
         outname = malloc(b1+b2+2+1); /* outname is what we use for fopen */
         }
 
