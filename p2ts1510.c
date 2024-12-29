@@ -50,6 +50,7 @@
 typedef unsigned char       BYTE;   /* For bytes, unsigned 8-bit */
 typedef unsigned short int  ADDR;   /* For addresses, unsigned 16-bit */
 typedef short int           ROMP;   /* For a rom[] or buff[] pointer or offset, signed 16-bit */
+typedef long int            LINENUM; /* For line numbers with option of -1 and >=32768, signed 32-bit */
 
 ADDR prog_size = 0;
 ADDR pfile_size = 0;
@@ -60,7 +61,7 @@ char *outname = NULL;
 char *outext = NULL;
 char *outroot = NULL;
 int includeVars = 1; /* Some programs need vars, so we default to include */
-int autorun = 32768; /* >=32768 Use the setting in the P file, <0=disable, >=0=set */
+LINENUM autorun = 32768; /* >=32768 Use the setting in the P file, <0=disable, >=0=set */
 int shortRomFile = 0;
 int oneRom = 1;
 int infoOnly = 0;    /* Only printing P file and block info but no ROMs */
@@ -398,7 +399,7 @@ void parseOptions (int argc, char *argv[])
                 break;
             case 'a':
                 aptr = argv[2] + strlen(argv[2]) - 1;
-                autorun = (unsigned int)strtoul(argv[2], &aptr, 0);
+                autorun = (LINENUM)strtoul(argv[2], &aptr, 0);
                 ++argv;
                 --argc;
                 break;
@@ -477,14 +478,14 @@ void writeROM(FILE *out, int endRom)
 }
 
 
-ROMP findLine (int line)
+ROMP findLine (LINENUM line)
 {
-    /* Search rom for the offset of a given line number l or the next line after */
+    /* Search buff for the offset of a given line number or the next line after */
     /* Returns -1 if line is greater than the last line */
 
-    ROMP inext = PROGRAM - SYSSAVE; /* next line index  */
-    ROMP ithis;     /* current line index  */
-    int  thisline;  /* current line number */
+    ROMP inext = PROGRAM - SYSSAVE; /* next line offset  */
+    ROMP ithis;       /* current line offset  */
+    LINENUM thisline; /* current line number */
     ROMP prog_end = PROGRAM - SYSSAVE + prog_size;
 
     do  {
@@ -591,7 +592,8 @@ int main (int argc, char *argv[])
     ADDR dfile, dfile_size;
     ADDR vars, vars_size;
     ADDR eline, ch_add, nxtlin;
-    ADDR autoaddr, autoline;
+    ADDR autoaddr;
+    LINENUM autoline;
     ADDR prog1len = 0;
     ADDR vars1len = 0;
     ADDR prog1offs = 0;
@@ -760,7 +762,7 @@ int main (int argc, char *argv[])
     else
         fprintf(stderr, "%s\n", outfile);
     fprintf(stderr, "Loader: %s, vars: %s, one ROM: %s, short ROM: %s, autorun: ", ldr_type[tapeLikeLoader], no_yes[includeVars], no_yes[oneRom], no_yes[shortRomFile]);
-    if (autorun > 9999)
+    if (autorun >= 32768)
         fprintf(stderr, "default");
     else if (autorun < 0)
         fprintf(stderr, "disable");
@@ -790,8 +792,8 @@ int main (int argc, char *argv[])
         {
         b1 = peek(nxtlin);
         b2 = peek(nxtlin+1);
-        c = lineNum(b1, b2);
-        fprintf(stderr, "Autorun line: %5d\n", c);
+        autoline = lineNum(b1, b2);
+        fprintf(stderr, "Autorun line: %5d\n", autoline);
         fprintf(stderr, "Autorun code:");
         printLine(stderr, nxtlin);
         }
@@ -1023,7 +1025,7 @@ int main (int argc, char *argv[])
         {
         f = autoaddr - SYSSAVE;
         /* Get actual line number bytes */
-        b1 = peek(autoaddr);
+        b1 = buff[f];
         b2 = buff[f+1];
         autoline = lineNum(b1, b2);
         autorun_check = 1;
